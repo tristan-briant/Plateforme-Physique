@@ -1,0 +1,9 @@
+Pour l'install :
+
+-- installer Visual studio code
+
+-- Dans VScode paramètres->extension installer PlatformIO
+
+-- installer le driver CP2105 (CP210xVCP) pour communiquer avec le M5
+
+C'est bon
