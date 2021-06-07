@@ -1,0 +1,67 @@
+<phyphox xmlns="http://phyphox.org/xml" xmlns:editor="http://phyphox.org/editor/xml" version="1.7" editor:version="1.0" locale="en">
+    <title>M5-SENSOR</title>
+    <category>External Devices</category>
+    <color>0000FF</color>
+    <description></description>
+    <icon format="string">M5</icon>
+    <data-containers>
+        <container size="1000" static="false">time</container>
+        <container size="1000" static="false">gyrX</container>
+        <container size="1000" static="false">accY</container>
+        <container size="1000" static="false">accZ</container>
+        <container size="1000" static="false">accX</container>
+        <container size="1000" static="false">gyrY</container>
+        <container size="1000" static="false">gyrZ</container>
+        <container size="1000" static="false">magY</container>
+        <container size="1000" static="false">magX</container>
+        <container size="1000" static="false">magZ</container>
+    </data-containers>
+    <input>
+        <bluetooth editor:uuid="631" editor:posx="100" editor:posy="250"  name="M5-SENSOR"  mode="notification" rate="1" subscribeOnStart="false">
+            <output char="9e34301c-5f00-4875-8cab-86c5b043dc8e" conversion="float32LittleEndian">time</output>
+            <output char="9e34301c-5f00-4875-8cab-86c5b043dc8e" conversion="float32LittleEndian" offset="4">accX</output>
+            <output char="9e34301c-5f00-4875-8cab-86c5b043dc8e" conversion="float32LittleEndian" offset="8">accY</output>
+            <output char="9e34301c-5f00-4875-8cab-86c5b043dc8e" conversion="float32LittleEndian" offset="12">accZ</output>
+            <output char="59f51a40-8852-4abe-a50f-2d45e6bd51ac" conversion="float32LittleEndian" offset="4">gyrX</output>
+            <output char="59f51a40-8852-4abe-a50f-2d45e6bd51ac" conversion="float32LittleEndian" offset="8">gyrY</output>
+            <output char="59f51a40-8852-4abe-a50f-2d45e6bd51ac" conversion="float32LittleEndian" offset="12">gyrZ</output>
+            <output char="360404ec-3ce8-47d9-93ff-727c1cdc1169" conversion="float32LittleEndian" offset="4">magX</output>
+            <output char="360404ec-3ce8-47d9-93ff-727c1cdc1169" conversion="float32LittleEndian" offset="8">magY</output>
+            <output char="360404ec-3ce8-47d9-93ff-727c1cdc1169" conversion="float32LittleEndian" offset="12">magZ</output>
+        </bluetooth>
+    </input>
+    <output>
+    </output>
+    <analysis sleep="0"  onUserInput="false">
+    </analysis>
+    <views>
+        <view label="New view">
+            <graph editor:uuid="685" editor:posx="696.7999877929688" editor:posy="2.8000030517578125" label="Accéléromètre" aspectRatio="2.5" style="lines" lineWidth="1" color="ff7e22" partialUpdate="false" history="1" labelX="" labelY="" labelZ="" unitX="" unitY="" unitZ="" logX="false" logY="false" logZ="false" xPrecision="3" yPrecision="3" zPrecision="3" scaleMinX="auto" scaleMaxX="auto" scaleMinY="auto" scaleMaxY="auto" scaleMinZ="auto" scaleMaxZ="auto" minX="0" maxX="0" minY="0" maxY="0" minZ="0" maxZ="0"  mapWidth="0"       >
+                <input axis="x" color="red" >time</input>
+                <input axis="y">accX</input>
+                <input axis="x" color="blue">time</input>
+                <input axis="y">accY</input>
+                <input axis="x" color="green">time</input>
+                <input axis="y">accZ</input>
+            </graph>
+            <graph editor:uuid="687" editor:posx="684.2666625976562" editor:posy="321.23333740234375" label="Gyromètre" aspectRatio="2.5" style="lines" lineWidth="1" color="ff7e22" partialUpdate="false" history="1" labelX="" labelY="" labelZ="" unitX="" unitY="" unitZ="" logX="false" logY="false" logZ="false" xPrecision="3" yPrecision="3" zPrecision="3" scaleMinX="auto" scaleMaxX="auto" scaleMinY="auto" scaleMaxY="auto" scaleMinZ="auto" scaleMaxZ="auto" minX="0" maxX="0" minY="0" maxY="0" minZ="0" maxZ="0"  mapWidth="0"       >
+                <input axis="x">time</input>
+                <input axis="y">gyrX</input>
+                <input axis="x">time</input>
+                <input axis="y">gyrY</input>
+                <input axis="x">time</input>
+                <input axis="y">gyrZ</input>
+            </graph>
+            <graph editor:uuid="686" editor:posx="681.2166748046875" editor:posy="662.8500061035156" label="Magnétomètre" aspectRatio="2.5" style="lines" lineWidth="1" color="ff7e22" partialUpdate="false" history="1" labelX="" labelY="" labelZ="" unitX="" unitY="" unitZ="" logX="false" logY="false" logZ="false" xPrecision="3" yPrecision="3" zPrecision="3" scaleMinX="auto" scaleMaxX="auto" scaleMinY="auto" scaleMaxY="auto" scaleMinZ="auto" scaleMaxZ="auto" minX="0" maxX="0" minY="0" maxY="0" minZ="0" maxZ="0"  mapWidth="0"       >
+                <input axis="x">time</input>
+                <input axis="y">magX</input>
+                <input axis="x">time</input>
+                <input axis="y">magY</input>
+                <input axis="x">time</input>
+                <input axis="y">magZ</input>
+            </graph>
+        </view>
+    </views>
+    <export>
+    </export>
+</phyphox>
