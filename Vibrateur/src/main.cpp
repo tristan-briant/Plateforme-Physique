@@ -11,9 +11,10 @@ void ReleaseMotor();
 
 enum ModeRun
 {
-  MOTOR_ON,
+  SINUS,
+  PULSE,
   MOTOR_BREAK,
-  MOTOR_RELEASED
+  MOTOR_RELEASED,
 };
 ModeRun mode_run;
 
@@ -23,7 +24,7 @@ extern int delaylength;
 
 const int SYNC_Pin = 22;
 
-TaskHandle_t Task1, Task2;
+TaskHandle_t Task1, Task2, Task3;
 
 float freq = 1, amp = 1, offset = 0, power = 1;
 float offsetTarget = 0, offsetCal = 0;
@@ -63,18 +64,21 @@ void draw()
   xpos = 10;
   img.setTextDatum(BL_DATUM);
   img.setFreeFont(&FreeSans18pt7b);
-  img.drawString("Freq ", xpos, ypos[0]);
+  if (mode_run != PULSE)
+    img.drawString("Freq ", xpos, ypos[0]);
+  else
+    img.drawString("Pulse press + or - ", xpos, ypos[0]);
   img.drawString("Ampl ", xpos, ypos[1]);
   //img.setTextDatum(BC_DATUM);
   img.drawString("Offset ", xpos, ypos[2]);
 
   img.setFreeFont(&FreeSans12pt7b);
   img.setTextDatum(CR_DATUM);
-  img.setTextColor(mode_run == MOTOR_ON ? colorText : DARKGREY);
+  img.setTextColor(mode_run == SINUS ? colorText : DARKGREY);
   img.drawString("On", 160 - 80, 0.5 * (ypos[2] + ypos[3]));
   img.setTextDatum(CC_DATUM);
-  img.setTextColor(mode_run == MOTOR_BREAK ? colorText : DARKGREY);
-  img.drawString("Break", 160, 0.5 * (ypos[2] + ypos[3]));
+  img.setTextColor(mode_run == PULSE ? colorText : DARKGREY);
+  img.drawString("Pulse", 160, 0.5 * (ypos[2] + ypos[3]));
   img.setTextDatum(CL_DATUM);
   img.setTextColor(mode_run == MOTOR_RELEASED ? colorText : DARKGREY);
   img.drawString("Free", 160 + 80, 0.5 * (ypos[2] + ypos[3]));
@@ -83,7 +87,8 @@ void draw()
   img.setTextDatum(BL_DATUM);
   img.setTextColor(colorText);
   xpos = 250;
-  img.drawString("Hz", xpos, ypos[0]);
+  if (mode_run != PULSE)
+    img.drawString("Hz", xpos, ypos[0]);
   img.drawString("mm", xpos, ypos[1]);
   img.drawString("mm", xpos, ypos[2]);
 
@@ -99,11 +104,21 @@ void draw()
   img.setTextDatum(BR_DATUM);
   img.setFreeFont(&FreeSansBold24pt7b);
   img.setTextColor(colorText);
-  img.drawFloat(freq, 1, xpos, ypos[0] + 2);
+  if (mode_run != PULSE)
+    img.drawFloat(freq, 2, xpos, ypos[0] + 2);
   img.drawFloat(amp, 1, xpos, ypos[1] + 2);
   img.drawFloat(offsetTarget - offsetCal, 1, xpos, ypos[2] + 2);
 
   img.pushSprite(0, 0);
+}
+
+float xpulse = 0;
+void TaskPulse(void *pvParameters)
+{
+  xpulse = 1;
+  delay(500);
+  xpulse = 0;
+  vTaskDelete(NULL);
 }
 
 void TaskOffset(void *pvParameters)
@@ -128,14 +143,6 @@ void TaskGUI(void *pvParameters)
   {
     int inc = 0;
 
-    /*if (Serial.available())
-    {
-      char a = Serial.read();
-
-      Serial.println(a);
-      mode = a - '0';
-    }*/
-
     if (M5.BtnB.isPressed() && M5.BtnC.isPressed())
     {
       offsetCal = offsetTarget;
@@ -143,10 +150,14 @@ void TaskGUI(void *pvParameters)
     }
     else
     {
-      if (M5.BtnB.wasPressed() || M5.BtnB.pressedFor(300))
+      if (M5.BtnB.wasPressed())
         inc = -1;
-      if (M5.BtnC.wasPressed() || M5.BtnC.pressedFor(300))
+      if (M5.BtnB.pressedFor(300))
+        inc = -5;
+      if (M5.BtnC.wasPressed())
         inc = +1;
+      if (M5.BtnC.pressedFor(300))
+        inc = +5;
     }
     if (M5.BtnA.wasPressed())
     {
@@ -158,24 +169,24 @@ void TaskGUI(void *pvParameters)
       switch (selection)
       {
       case 0:
-        freq = constrain(freq + inc * 0.1, 0, FREQ_MAX);
+        if (mode_run != PULSE)
+          freq = constrain(freq + inc * 0.01, 0, FREQ_MAX);
+        else if (xpulse == 0)
+          xTaskCreatePinnedToCore(TaskPulse, "Task3", 4000, NULL, 1, &Task3, 0);
+
         break;
       case 1:
         amp = constrain(amp + inc * 0.1, 0, AMPL_MAX);
         break;
       case 2:
-        /*power += inc * 0.1;
-        if(power>1) power=1;
-        if(power<0) power=0;*/
         offsetTarget += inc * 0.5;
         break;
       case 3:
         mode_run = (ModeRun)constrain(mode_run + inc, 0, 2);
-        //if(mode_run==Mo)
       }
       draw();
     }
-    delay(10);
+    delay(1);
     M5.update();
   }
 }
@@ -207,6 +218,7 @@ void setup()
 void loop()
 {
   static int s = 0;
+  float x = 0;
 
   long t = micros();
   static long t_old = t;
@@ -218,16 +230,21 @@ void loop()
     return;
   }
 
-  if (mode_run == MOTOR_ON)
+  if (mode_run == SINUS)
+  {
     phase += 2 * PI * freq * (t - t_old) / 1000000;
 
-  if (phase > 2 * PI)
-    phase -= 2 * PI;
+    if (phase > 2 * PI)
+      phase -= 2 * PI;
+
+    x = MICROSTEP_BY_MM * (amp * sin(phase) + offset);
+  }
+  if (mode_run == PULSE)
+  {
+    x = MICROSTEP_BY_MM * (amp * (sin(phase) + xpulse) + offset);
+  }
 
   t_old = t;
-
-  float x = MICROSTEP_BY_MM * (amp * sin(phase) + offset);
-  //float x = STEP_BY_MM * (amp * phase + offset);
 
   if (s < x)
   {
@@ -249,4 +266,3 @@ void loop()
 
   delayMicroseconds(200);
 }
-
