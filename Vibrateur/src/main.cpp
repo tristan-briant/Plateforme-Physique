@@ -12,9 +12,9 @@ void ReleaseMotor();
 enum ModeRun
 {
   SINUS,
-  PULSE,
   MOTOR_BREAK,
   MOTOR_RELEASED,
+  PULSE // not used
 };
 ModeRun mode_run;
 
@@ -77,8 +77,8 @@ void draw()
   img.setTextColor(mode_run == SINUS ? colorText : DARKGREY);
   img.drawString("On", 160 - 80, 0.5 * (ypos[2] + ypos[3]));
   img.setTextDatum(CC_DATUM);
-  img.setTextColor(mode_run == PULSE ? colorText : DARKGREY);
-  img.drawString("Pulse", 160, 0.5 * (ypos[2] + ypos[3]));
+  img.setTextColor(mode_run == MOTOR_BREAK ? colorText : DARKGREY);
+  img.drawString("Off", 160, 0.5 * (ypos[2] + ypos[3]));
   img.setTextDatum(CL_DATUM);
   img.setTextColor(mode_run == MOTOR_RELEASED ? colorText : DARKGREY);
   img.drawString("Free", 160 + 80, 0.5 * (ypos[2] + ypos[3]));
@@ -150,13 +150,13 @@ void TaskGUI(void *pvParameters)
     }
     else
     {
-      if (M5.BtnB.wasPressed())
+      if (M5.BtnB.wasPressed() || (M5.BtnB.pressedFor(300) && !M5.BtnB.pressedFor(2000)))
         inc = -1;
-      if (M5.BtnB.pressedFor(300))
+      if (M5.BtnB.pressedFor(2000))
         inc = -5;
-      if (M5.BtnC.wasPressed())
+      if (M5.BtnC.wasPressed() || (M5.BtnC.pressedFor(300) && !M5.BtnC.pressedFor(2000)))
         inc = +1;
-      if (M5.BtnC.pressedFor(300))
+      if (M5.BtnC.pressedFor(2000))
         inc = +5;
     }
     if (M5.BtnA.wasPressed())
@@ -176,13 +176,13 @@ void TaskGUI(void *pvParameters)
 
         break;
       case 1:
-        amp = constrain(amp + inc * 0.1, 0, AMPL_MAX);
+        amp = constrain(amp + constrain(inc, -2, +2) * 0.1, 0, AMPL_MAX);
         break;
       case 2:
-        offsetTarget += inc * 0.5;
+        offsetTarget += constrain(inc, -1, +1) * 0.5;
         break;
       case 3:
-        mode_run = (ModeRun)constrain(mode_run + inc, 0, 2);
+        mode_run = (ModeRun)constrain(mode_run + constrain(inc, -1, +1), 0, 2);
       }
       draw();
     }
@@ -228,6 +228,15 @@ void loop()
   {
     ReleaseMotor();
     return;
+  }
+
+  if (mode_run == MOTOR_BREAK)
+  {
+    const float dx = 1.0; // small dx for smooth return to zero
+    if (x > MICROSTEP_BY_MM * (offset) + dx)
+      x -= dx;
+    else
+      x += dx;
   }
 
   if (mode_run == SINUS)
