@@ -230,24 +230,24 @@ void loop()
     return;
   }
 
-  if (mode_run == MOTOR_BREAK)
+  /*if (mode_run == MOTOR_BREAK)
   {
-    const float dx = 1.0; // small dx for smooth return to zero
+    const float dx = 0.10; // small dx for smooth return to zero
     if (x > MICROSTEP_BY_MM * (offset) + dx)
       x -= dx;
     else
       x += dx;
-  }
+  }*/
 
-  if (mode_run == SINUS)
+  if (mode_run == SINUS || (mode_run == MOTOR_BREAK && abs(sin(phase)) > 0.01))
   {
     phase += 2 * PI * freq * (t - t_old) / 1000000;
 
     if (phase > 2 * PI)
       phase -= 2 * PI;
-
-    x = MICROSTEP_BY_MM * (amp * sin(phase) + offset);
   }
+  x = MICROSTEP_BY_MM * (amp * sin(phase) + offset);
+
   if (mode_run == PULSE)
   {
     x = MICROSTEP_BY_MM * (amp * (sin(phase) + xpulse) + offset);
