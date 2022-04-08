@@ -4,6 +4,7 @@
         "*.tcc": "cpp",
         "random": "cpp",
         "tuple": "cpp",
-        "limits": "cpp"
+        "limits": "cpp",
+        "algorithm": "cpp"
     }
 }

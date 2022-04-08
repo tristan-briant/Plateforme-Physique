@@ -1,6 +1,6 @@
 #include <M5stack.h>
 
-///// Motor constant and Variables
+///// Motor pins, constants and variables
 const int NSTEP_MAX = 32 * 13; // 32 step per tooth (64*8 for 360°)
 int motor_x, motor_y;
 int target_x, target_y;
@@ -11,12 +11,12 @@ int BackLash = 5;
 int PinMotor[] = {16, 17, 2, 5};
 int PinSwitchMotor = 26;
 
-//////// Photodiode pin and variable
+//////// Photodiodes pin and variables
 const int PinPhotoDiode1 = 36;
 const int PinPhotoDiode2 = 35;
-float signal1; // measured depth 0<signal<1
-float signal2; // measured depth 0<signal<1
-float signal;
+float signal1; // signal from Phd1
+float signal2; // signal from Phd2
+float signal; // measured depth 0<signal<1
 const float gain = 4.0;
 
 //////// Image parameters
@@ -36,7 +36,7 @@ void TaskScan(void *pvParameters);
 void AbordAnyMotorTask();
 void sendPythonScript();
 int colorFromRGB(float r, float g, float b);
-int Color(float x);
+int colorScale(float x);
 void loopMeasure(void *pvParameters);
 void loopMotor(void *pvParameters);
 void loopGUI(void *pvParameters);
@@ -55,7 +55,6 @@ void setup()
 
   /// Create the image
   img.setColorDepth(8);
-  // img.setTextColor(TFT_WHITE);
   img.createSprite(IMAG_SIZE, IMAG_SIZE);
 
   target_x = target_y = motor_x = motor_y = 0;
@@ -73,7 +72,7 @@ void loop() // not used
 void loopMeasure(void *pvParameters) // Manage the detection
 {
   const float alpha = 0.05; // avaraging factor 0<alpha<1
-  signal1 = 0;
+  signal1 = signal2 = 0;
 
   while (true) // Never return
   {
@@ -83,7 +82,6 @@ void loopMeasure(void *pvParameters) // Manage the detection
     signal1 = alpha * x1 + (1 - alpha) * signal1;
     signal2 = alpha * x2 + (1 - alpha) * signal2;
 
-    // signal = constrain(gain * (signal1 - signal2) / 2 + 0.5, 0, 1);
     signal = atan(gain * (signal2 - signal1) * 3.14159) / 3.14159 + 0.5;
 
     delayMicroseconds(100);
@@ -127,7 +125,7 @@ void loopGUI(void *pvParameters) // Manage LCD and buttons
 
     M5.Lcd.setTextDatum(TC_DATUM);
     M5.Lcd.setTextSize(2);
-    M5.Lcd.drawString("Home", 70, 215);
+    M5.Lcd.drawString("Abord", 70, 215);
     M5.Lcd.drawString("Scan", 160, 215);
     M5.Lcd.drawString("Init.", 250, 215);
 
@@ -138,35 +136,36 @@ void loopGUI(void *pvParameters) // Manage LCD and buttons
 
     float s = constrain(1 - signal, 0, 0.9);
     M5.Lcd.fillRect(12, 0, 5, 200 * s, BLACK);
-    M5.Lcd.fillRect(12, 200 * s, 5, 200 * (1 - s), Color(signal));
+    M5.Lcd.fillRect(12, 200 * s, 5, 200 * (1 - s), colorScale(signal));
 
     M5.Lcd.drawRect(115 - 1, 5 - 1, IMAG_SIZE + 2, IMAG_SIZE + 2, WHITE);
     img.pushSprite(115, 5);
 
-    if (M5.BtnA.wasPressed())
+    char c = 0;
+    if (Serial.available())
+      c = Serial.read();
+
+    if (M5.BtnA.wasPressed() || c == 'a') //Abord
     {
       AbordAnyMotorTask();
       target_x = 0;
       target_y = 0;
     }
 
-    if (M5.BtnB.wasPressed())
+    if (M5.BtnB.wasPressed() || c == 's') // Scan
     {
       AbordAnyMotorTask();
       xTaskCreatePinnedToCore(TaskScan, "TaskCalibrate", 4000, NULL, 1, &TaskOperation, 1); // Task with Motor must run on Core 1 (no delay in step)*/
     }
 
-    if (M5.BtnC.wasPressed())
+    if (M5.BtnC.wasPressed() || c == 'i') // Initialize
     {
       AbordAnyMotorTask();
       xTaskCreatePinnedToCore(TaskInitialize, "TaskInitialize", 4000, NULL, 1, &TaskOperation, 1); // Task with Motor must run on Core 1 (no delay in step)*/
     }
 
-    if (Serial.available())
-    {
-      if (Serial.read() == 'p')
-        sendPythonScript();
-    }
+    if (c == 'p')       // Send Data inside a python script
+      sendPythonScript();
 
     delay(10);
   }
@@ -211,34 +210,25 @@ void TaskScan(void *pvParameters)
   for (int line = 0; line < NLines; line++)
   {
     target_y = 0.5 * ScanSize - ScanSize * line / NLines;
-
     target_x = -ScanSize / 2;
     while (motor_x != target_x || motor_y != target_y) // Wait until motor reach target
       delay(1);
-    target_x = ScanSize / 2;
-    int offset = 0;
 
-    /*if (line % 2){
-      target_x = ScanSize / 2 + BackLash;
-      offset=BackLash;
-    }
-    else{
-      target_x = -ScanSize / 2;
-      offset=0;
-    }*/
-    int count = 0;
+    target_x = ScanSize / 2;
+
+    // int count = 0;
 
     while (motor_x != target_x)
     {
-      int posx = map(motor_x - offset, -0.5 * ScanSize, 0.5 * ScanSize, 0.0, IMAG_SIZE);
+      int posx = map(motor_x, -0.5 * ScanSize, 0.5 * ScanSize, 0.0, IMAG_SIZE);
       int posy = map(motor_y, -0.5 * ScanSize, 0.5 * ScanSize, IMAG_SIZE, 0);
-      img.fillRect(posx, posy, 1, IMAG_SIZE / NLines + 1, Color(signal));
-
-      if (count <= posx)
+      img.fillRect(posx, posy, 1, IMAG_SIZE / NLines + 1, colorScale(signal));
+      data[posx][line] = signal;
+      /*if (count <= posx)
       { // save new data
         data[count][line] = signal;
         count++;
-      }
+      }*/
 
       delay(5);
     }
@@ -250,20 +240,19 @@ void TaskScan(void *pvParameters)
 
 void step(int motor, int dir, int nstep)
 {
-  int rotation;
+  int rotation = motor == 2 ? -dir : dir; // Y axes reversed
 
   digitalWrite(PinSwitchMotor, motor == 1 ? HIGH : LOW);
-  rotation = motor == 2 ? -dir : dir; // X axes reversed
 
   for (int k = 0; k < nstep; k++)
   {
-    if (rotation > 0) // X axes reversed
+    if (rotation > 0)
       for (int i = 0; i < 4; i++)
       {
-        digitalWrite(PinMotor[i], HIGH);
+        digitalWrite(PinMotor[i % 4], HIGH);
         digitalWrite(PinMotor[(i + 1) % 4], HIGH);
         delayMicroseconds(TEMP);
-        digitalWrite(PinMotor[i], LOW);
+        digitalWrite(PinMotor[i % 4], LOW);
         digitalWrite(PinMotor[(i + 1) % 4], LOW);
       }
     else
@@ -298,7 +287,7 @@ int colorFromRGB(float r, float g, float b) // Convert rgb composants 0< <1 to l
   return R + G + B;
 }
 
-int Color(float x)
+int colorScale(float x)
 {
   if (x < 1 / 3.0)
     return colorFromRGB(0, 0, x * 2 + 1 / 3.0);
