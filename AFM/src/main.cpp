@@ -1,10 +1,10 @@
 #include <M5stack.h>
 
 ///// Motor pins, constants and variables
-const int NSTEP_MAX = 32 * 13; // 32 step per tooth (64*8 for 360°)
+const int NSTEP_MAX = 16 * 13; // 32 step per tooth (64*8 for 360°)
 int motor_x, motor_y;
 int target_x, target_y;
-const int TEMP = 4000; // time in µs for 1/4 step
+const int TEMP = 1200; // time in µs for 1/4 step
 bool moving = false;
 int BackLash = 5;
 
@@ -16,7 +16,7 @@ const int PinPhotoDiode1 = 36;
 const int PinPhotoDiode2 = 35;
 float signal1; // signal from Phd1
 float signal2; // signal from Phd2
-float signal; // measured depth 0<signal<1
+float sig;  // measured depth 0<signal<1
 const float gain = 4.0;
 
 //////// Image parameters
@@ -82,7 +82,7 @@ void loopMeasure(void *pvParameters) // Manage the detection
     signal1 = alpha * x1 + (1 - alpha) * signal1;
     signal2 = alpha * x2 + (1 - alpha) * signal2;
 
-    signal = atan(gain * (signal2 - signal1) * 3.14159) / 3.14159 + 0.5;
+    sig = atan(gain * (signal2 - signal1) * 3.14159) / 3.14159 + 0.5;
 
     delayMicroseconds(100);
   }
@@ -134,9 +134,9 @@ void loopGUI(void *pvParameters) // Manage LCD and buttons
     M5.Lcd.fillRect(6, 0, 5, 200 * signal2, BLACK);
     M5.Lcd.fillRect(6, 200 * signal2, 5, 200 * (1 - signal2), RED);
 
-    float s = constrain(1 - signal, 0, 0.9);
+    float s = constrain(1 - sig, 0, 0.9);
     M5.Lcd.fillRect(12, 0, 5, 200 * s, BLACK);
-    M5.Lcd.fillRect(12, 200 * s, 5, 200 * (1 - s), colorScale(signal));
+    M5.Lcd.fillRect(12, 200 * s, 5, 200 * (1 - s), colorScale(sig));
 
     M5.Lcd.drawRect(115 - 1, 5 - 1, IMAG_SIZE + 2, IMAG_SIZE + 2, WHITE);
     img.pushSprite(115, 5);
@@ -145,7 +145,7 @@ void loopGUI(void *pvParameters) // Manage LCD and buttons
     if (Serial.available())
       c = Serial.read();
 
-    if (M5.BtnA.wasPressed() || c == 'a') //Abord
+    if (M5.BtnA.wasPressed() || c == 'a') // Abord
     {
       AbordAnyMotorTask();
       target_x = 0;
@@ -164,7 +164,7 @@ void loopGUI(void *pvParameters) // Manage LCD and buttons
       xTaskCreatePinnedToCore(TaskInitialize, "TaskInitialize", 4000, NULL, 1, &TaskOperation, 1); // Task with Motor must run on Core 1 (no delay in step)*/
     }
 
-    if (c == 'p')       // Send Data inside a python script
+    if (c == 'p') // Send Data inside a python script
       sendPythonScript();
 
     delay(10);
@@ -176,6 +176,7 @@ void AbordAnyMotorTask()
   if (TaskOperation)
     vTaskDelete(TaskOperation);
 
+  Serial.println((int)TaskOperation);
   target_x = motor_x;
   target_y = motor_y;
 }
@@ -222,8 +223,8 @@ void TaskScan(void *pvParameters)
     {
       int posx = map(motor_x, -0.5 * ScanSize, 0.5 * ScanSize, 0.0, IMAG_SIZE);
       int posy = map(motor_y, -0.5 * ScanSize, 0.5 * ScanSize, IMAG_SIZE, 0);
-      img.fillRect(posx, posy, 1, IMAG_SIZE / NLines + 1, colorScale(signal));
-      data[posx][line] = signal;
+      img.fillRect(posx, posy, 1, IMAG_SIZE / NLines + 1, colorScale(sig));
+      data[posx][line] = sig;
       /*if (count <= posx)
       { // save new data
         data[count][line] = signal;
