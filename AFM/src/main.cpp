@@ -16,8 +16,8 @@ const int PinPhotoDiode1 = 36;
 const int PinPhotoDiode2 = 35;
 float signal1; // signal from Phd1
 float signal2; // signal from Phd2
-float sig;  // measured depth 0<signal<1
-const float gain = 4.0;
+float sig;     // measured depth 0<signal<1
+const float gain = 2.0;
 
 //////// Image parameters
 const int IMAG_SIZE = 200;
@@ -82,7 +82,7 @@ void loopMeasure(void *pvParameters) // Manage the detection
     signal1 = alpha * x1 + (1 - alpha) * signal1;
     signal2 = alpha * x2 + (1 - alpha) * signal2;
 
-    sig = atan(gain * (signal2 - signal1) * 3.14159) / 3.14159 + 0.5;
+    sig = tanh(gain * (signal2 - signal1)) * 0.5 + 0.5;
 
     delayMicroseconds(100);
   }
@@ -129,14 +129,14 @@ void loopGUI(void *pvParameters) // Manage LCD and buttons
     M5.Lcd.drawString("Scan", 160, 215);
     M5.Lcd.drawString("Init.", 250, 215);
 
-    M5.Lcd.fillRect(0, 0, 5, 200 * signal1, BLACK);
-    M5.Lcd.fillRect(0, 200 * signal1, 5, 200 * (1 - signal1), RED);
-    M5.Lcd.fillRect(6, 0, 5, 200 * signal2, BLACK);
-    M5.Lcd.fillRect(6, 200 * signal2, 5, 200 * (1 - signal2), RED);
+    M5.Lcd.fillRect(0, 0, 5, 200 * (1 - signal1), BLACK);
+    M5.Lcd.fillRect(0, 200 * (1 - signal1), 5, 200 * signal1, RED);
+    M5.Lcd.fillRect(6, 0, 5, 200 * (1 - signal2), BLACK);
+    M5.Lcd.fillRect(6, 200 * (1 - signal2), 5, 200 * signal2, RED);
 
     float s = constrain(1 - sig, 0, 0.9);
-    M5.Lcd.fillRect(12, 0, 5, 200 * s, BLACK);
-    M5.Lcd.fillRect(12, 200 * s, 5, 200 * (1 - s), colorScale(sig));
+    M5.Lcd.fillRect(18, 0, 5, 200 * s, BLACK);
+    M5.Lcd.fillRect(18, 200 * s, 5, 200 * (1 - s), colorScale(sig));
 
     M5.Lcd.drawRect(115 - 1, 5 - 1, IMAG_SIZE + 2, IMAG_SIZE + 2, WHITE);
     img.pushSprite(115, 5);
