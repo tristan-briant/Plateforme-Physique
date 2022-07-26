@@ -1,11 +1,10 @@
 #include <M5stack.h>
 
 ///// Motor pins, constants and variables
-const int NSTEP_MAX = 16 * 13; // 32 step per tooth (64*8 for 360°)
+const int NSTEP_MAX = 32 * 13; // 32 step per tooth (64*8 for 360°)
 int motor_x, motor_y;
 int target_x, target_y;
 const int TEMP = 1200; // time in µs for 1/4 step
-bool moving = false;
 int BackLash = 5;
 
 int PinMotor[] = {16, 17, 2, 5};
@@ -17,20 +16,20 @@ const int PinPhotoDiode2 = 35;
 float signal1; // signal from Phd1
 float signal2; // signal from Phd2
 float sig;     // measured depth 0<signal<1
-const float gain = 2.0;
+const float gain = 5.0;
 
 //////// Image parameters
 const int IMAG_SIZE = 200;
 TFT_eSprite img = TFT_eSprite(&M5.Lcd);
 
 ///// Scan parameters
-const int ScanSize = NSTEP_MAX / 3 * 1.6;
-const int NLines = 50;
+const int ScanSize = NSTEP_MAX * 0.8;
+const int NLines = 25;
 float data[IMAG_SIZE][NLines];
 
 ////////// Function Declaration //////////////
 TaskHandle_t TaskMeasure, TaskGUI, TaskMotor, TaskOperation;
-void step(int motor, int dir, int nstep = 1);
+void step(int motor, int nstep = 1);
 void TaskInitialize(void *pvParameters);
 void TaskScan(void *pvParameters);
 void AbordAnyMotorTask();
@@ -71,7 +70,7 @@ void loop() // not used
 
 void loopMeasure(void *pvParameters) // Manage the detection
 {
-  const float alpha = 0.05; // avaraging factor 0<alpha<1
+  const float alpha = 0.05; // averaging factor 0<alpha<1
   signal1 = signal2 = 0;
 
   while (true) // Never return
@@ -92,27 +91,12 @@ void loopMotor(void *pvParameters) // Manage the motor position
 {
   while (true) // Never return
   {
-
-    if (target_x != motor_x || target_y != motor_y)
-      moving = true;
-    else
-      moving = false;
-
     if (target_x != motor_x)
-    {
-      if (target_x > motor_x)
-        step(1, 1, target_x - motor_x);
-      else
-        step(1, -1, motor_x - target_x);
-    }
+      step(1, target_x - motor_x);
 
     if (target_y != motor_y)
-    {
-      if (target_y > motor_y)
-        step(2, 1, target_y - motor_y);
-      else
-        step(2, -1, motor_y - target_y);
-    }
+      step(2, target_y - motor_y);
+
     delay(1);
   }
 }
@@ -123,6 +107,7 @@ void loopGUI(void *pvParameters) // Manage LCD and buttons
   {
     M5.update();
 
+    ////////// Draw the interface //////////////
     M5.Lcd.setTextDatum(TC_DATUM);
     M5.Lcd.setTextSize(2);
     M5.Lcd.drawString("Abord", 70, 215);
@@ -141,8 +126,10 @@ void loopGUI(void *pvParameters) // Manage LCD and buttons
     M5.Lcd.drawRect(115 - 1, 5 - 1, IMAG_SIZE + 2, IMAG_SIZE + 2, WHITE);
     img.pushSprite(115, 5);
 
+    /////////// Manage button or USB //////////////
+
     char c = 0;
-    if (Serial.available())
+    if (Serial.available()) // Check if command is sent on the USB
       c = Serial.read();
 
     if (M5.BtnA.wasPressed() || c == 'a') // Abord
@@ -155,13 +142,13 @@ void loopGUI(void *pvParameters) // Manage LCD and buttons
     if (M5.BtnB.wasPressed() || c == 's') // Scan
     {
       AbordAnyMotorTask();
-      xTaskCreatePinnedToCore(TaskScan, "TaskCalibrate", 4000, NULL, 1, &TaskOperation, 1); // Task with Motor must run on Core 1 (no delay in step)*/
+      xTaskCreatePinnedToCore(TaskScan, "TaskCalibrate", 4000, NULL, 1, &TaskOperation, 1); // Task with Motor must run on Core 1 (no delay in step)
     }
 
     if (M5.BtnC.wasPressed() || c == 'i') // Initialize
     {
       AbordAnyMotorTask();
-      xTaskCreatePinnedToCore(TaskInitialize, "TaskInitialize", 4000, NULL, 1, &TaskOperation, 1); // Task with Motor must run on Core 1 (no delay in step)*/
+      xTaskCreatePinnedToCore(TaskInitialize, "TaskInitialize", 4000, NULL, 1, &TaskOperation, 1); // Task with Motor must run on Core 1 (no delay in step)
     }
 
     if (c == 'p') // Send Data inside a python script
@@ -176,7 +163,6 @@ void AbordAnyMotorTask()
   if (TaskOperation)
     vTaskDelete(TaskOperation);
 
-  Serial.println((int)TaskOperation);
   target_x = motor_x;
   target_y = motor_y;
 }
@@ -206,7 +192,6 @@ void TaskScan(void *pvParameters)
     delay(1);
 
   img.fillSprite(BLACK);
-  target_x = -ScanSize / 2;
 
   for (int line = 0; line < NLines; line++)
   {
@@ -217,19 +202,12 @@ void TaskScan(void *pvParameters)
 
     target_x = ScanSize / 2;
 
-    // int count = 0;
-
     while (motor_x != target_x)
     {
       int posx = map(motor_x, -0.5 * ScanSize, 0.5 * ScanSize, 0.0, IMAG_SIZE);
       int posy = map(motor_y, -0.5 * ScanSize, 0.5 * ScanSize, IMAG_SIZE, 0);
       img.fillRect(posx, posy, 1, IMAG_SIZE / NLines + 1, colorScale(sig));
       data[posx][line] = sig;
-      /*if (count <= posx)
-      { // save new data
-        data[count][line] = signal;
-        count++;
-      }*/
 
       delay(5);
     }
@@ -239,37 +217,42 @@ void TaskScan(void *pvParameters)
   vTaskDelete(NULL); // Terminate task properly
 }
 
-void step(int motor, int dir, int nstep)
+void step(int motor, int nstep)
 {
-  int rotation = motor == 2 ? -dir : dir; // Y axes reversed
+  int direction = 1; // 1=>forward -1=>backward
 
-  digitalWrite(PinSwitchMotor, motor == 1 ? HIGH : LOW);
+  if (nstep < 0)
+  {
+    direction = -1;
+    nstep = -nstep;
+  }
+
+  if (motor == 1)
+    digitalWrite(PinSwitchMotor, HIGH);
+  else
+    digitalWrite(PinSwitchMotor, LOW);
 
   for (int k = 0; k < nstep; k++)
   {
-    if (rotation > 0)
+    if (direction > 0)
       for (int i = 0; i < 4; i++)
       {
-        digitalWrite(PinMotor[i % 4], HIGH);
-        digitalWrite(PinMotor[(i + 1) % 4], HIGH);
+        digitalWrite(PinMotor[i], HIGH);
         delayMicroseconds(TEMP);
-        digitalWrite(PinMotor[i % 4], LOW);
-        digitalWrite(PinMotor[(i + 1) % 4], LOW);
+        digitalWrite(PinMotor[i], LOW);
       }
     else
       for (int i = 3; i >= 0; i--)
       {
         digitalWrite(PinMotor[i], HIGH);
-        digitalWrite(PinMotor[(i + 1) % 4], HIGH);
         delayMicroseconds(TEMP);
         digitalWrite(PinMotor[i], LOW);
-        digitalWrite(PinMotor[(i + 1) % 4], LOW);
       }
 
     if (motor == 1)
-      motor_x += dir;
+      motor_x += direction;
     else
-      motor_y += dir;
+      motor_y += direction;
   }
 }
 
