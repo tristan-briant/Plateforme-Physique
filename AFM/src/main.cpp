@@ -36,7 +36,7 @@ void AbordAnyMotorTask();
 void sendPythonScript();
 int colorFromRGB(float r, float g, float b);
 int colorScale(float x);
-void loopMeasure(void *pvParameters);
+void loopServo(void *pvParameters);
 void loopMotor(void *pvParameters);
 void loopGUI(void *pvParameters);
 
@@ -59,7 +59,7 @@ void setup()
   target_x = target_y = motor_x = motor_y = 0;
 
   // Launch main loops
-  xTaskCreatePinnedToCore(loopMeasure, "TaskMeasure", 4000, NULL, 1, &TaskMeasure, 1);
+  xTaskCreatePinnedToCore(loopServo, "TaskMeasure", 4000, NULL, 1, &TaskMeasure, 1);
   xTaskCreatePinnedToCore(loopGUI, "TaskGUI", 4000, NULL, 1, &TaskGUI, 0);
   xTaskCreatePinnedToCore(loopMotor, "TaskMotor", 4000, NULL, 1, &TaskMotor, 1);
 }
@@ -68,7 +68,7 @@ void loop() // not used
 {
 }
 
-void loopMeasure(void *pvParameters) // Manage the detection
+void loopServo(void *pvParameters) // Manage the detection
 {
   const float alpha = 0.05; // averaging factor 0<alpha<1
   signal1 = signal2 = 0;
