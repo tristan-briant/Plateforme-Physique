@@ -1,10 +1,22 @@
 #include <m5stack.h>
 
+void oneStep(int forward);
+void motor_init();
+void ReleaseMotor();
+float phase = 0;
+
+#define ANALOG_READ 1
+
+const int OFLedPin = 12; // Optical fork LED
+const int OFPhDPin = 34; // Photodiode
+
+const float TIME_TO_ROW = 1e6 / 20; // Speed in row per second
+
 const bool TWO_COILS = 1;
 const float thresholdHIGH = 50;
 const float thresholdLOW = 60;
 
-const int measurePin[] = {12, 13, 34, 15};
+// const int measurePin[] = {12, 13, 34, 15};
 const int enablePin = 26;
 
 bool Measure;
@@ -48,16 +60,20 @@ void setup()
 
   Serial.begin(2000000);
 
+  motor_init();
+
   xTaskCreatePinnedToCore(TaskGUI, "", 4000, NULL, 1, NULL, 1);
-  // xTaskCreatePinnedToCore(TaskCycle, "", 4000, NULL, 1, NULL, 0);
+  xTaskCreatePinnedToCore(TaskMeasure, "", 4000, NULL, 1, NULL, 1);
 
   pinMode(25, OUTPUT);
+  pinMode(enablePin, OUTPUT);
   digitalWrite(25, 0);
-  pinMode(26, OUTPUT);
-
-  // pinMode(2, INPUT);
-  //  analogSetWidth(9);
+  pinMode(OFLedPin, OUTPUT);
+  digitalWrite(enablePin, HIGH);
+  //Speed = 100;
 }
+
+bool phd;
 
 void TaskGUI(void *)
 {
@@ -67,144 +83,97 @@ void TaskGUI(void *)
     M5.update();
 
     if (M5.BtnA.wasPressed())
-      SpeedTarget -= 100;
+      SpeedTarget -= 1;
     if (M5.BtnB.wasPressed())
       SpeedTarget = 0;
     if (M5.BtnC.wasPressed())
-      SpeedTarget += 100;
+      SpeedTarget += 1;
 
     M5.Lcd.setCursor(0, 0);
-    M5.Lcd.printf("%5.2f   %5.2f   %5.2f", Speed, SpeedTarget, SpeedM);
+    M5.Lcd.printf("%5.2f   %5.2f   %5.2f     %5.2f", Speed, SpeedTarget, SpeedM,phase);
 
-     Serial.println(SpeedM);
-    //Serial.println(GetSpeed());
-    delay(1);
-    /*digitalWrite(enablePin, HIGH);
-    for (int i = 0; i < 500; i++)
-    {
+    M5.Lcd.setCursor(0, 20);
+    M5.Lcd.printf("%d", phd);
 
-      int I = analogRead(measurePin[0]); // - analogRead(measurePin[1]);
-      // int Q = analogRead(measurePin[2]);// - analogRead(measurePin[3]);
-      // Serial.printf("%5d  %5d\n", I, Q);
-      Serial.printf("%5d  \n", I);
-    }
-    delay(500);*/
+    Serial.println(SpeedM);
+    delay(10);
   }
 }
 
 void loop()
 {
-  static int count;
-  count = (count + 1) % 100; // if count = 0 --> Measure
-
-  // Time management
-  static long timeOld = micros();
-  long timeNew, deltaTime;
-  timeNew = micros();
-  deltaTime = timeNew - timeOld;
-  timeOld = timeNew;
-  /////////////////////////////
-
-  if (count == 0 || Speed == 0)
+  
+  int s;
+  while (true)
   {
-    delayMicroseconds(temp/2);
-    SpeedM = GetSpeed();
-  }
 
-  if (Speed < SpeedTarget)
-    Speed = min(SpeedTarget, Speed + Acc * deltaTime);
-  if (Speed > SpeedTarget)
-    Speed = max(SpeedTarget, Speed - Acc * deltaTime);
+    // Time management
+    static long timeOld = micros();
+    long timeNew, deltaTime;
+    timeNew = micros();
+    deltaTime = timeNew - timeOld;
+    timeOld = timeNew;
+    /////////////////////////////
 
-  if (Speed != 0)
-  {
-    digitalWrite(enablePin, HIGH);
+    if (Speed < SpeedTarget)
+      Speed = min(SpeedTarget, Speed + Acc * deltaTime);
+    if (Speed > SpeedTarget)
+      Speed = max(SpeedTarget, Speed - Acc * deltaTime);
 
-    temp = min(1e6 / abs(Speed), 100000);
+    phase += Speed * deltaTime/1e3;
 
-    int k = Speed > 0 ? 0 : 3;
-
-    for (int i = 0; i < 4; i++)
+    if (s < phase)
     {
-      digitalWrite(motorPin[k], HIGH);
-      if (TWO_COILS)
-        digitalWrite(motorPin[(k + 1) % 4], HIGH);
-
-      delayMicroseconds(temp);
-
-      digitalWrite(motorPin[k], LOW);
-      if (TWO_COILS)
-        digitalWrite(motorPin[(k + 1) % 4], LOW);
-
-      k += Speed > 0 ? +1 : -1;
+      oneStep(1);
+      s++;
     }
+    else if (s > phase + 1)
+    {
+      oneStep(-1);
+      s--;
+    }
+    else
+      oneStep(0);
+
+    delayMicroseconds(5);
   }
 }
 
-float GetSpeed(unsigned long MeasureTime)
+void TaskMeasure(void *param)
 {
-  static float prevSpeed = 0;
 
-  MeasureTime = min(MeasureTime, TIMEOUT);
-  digitalWrite(enablePin, HIGH);
+  pinMode(OFPhDPin, INPUT);
+  digitalWrite(OFLedPin, HIGH);
 
-  float speed = 0;
-  const float threshold = 100;
-  int I, Q;
-  bool StateI, StateQ;
-  unsigned long timeEdgeI_P = 0, timeEdgeI_N, timeEdgeQ_P, timeEdgeQ_N;
+  unsigned long timeStart, timeEnd, timeEdge;
+  bool StateHigh = digitalRead(OFPhDPin);
+  long interval;
 
-  for (int i = 0; i < 4; i++)
-    digitalWrite(motorPin[i], LOW);
-
-  I = analogRead(measurePin[0]) - analogRead(measurePin[1]);
-  Q = analogRead(measurePin[2]) - analogRead(measurePin[3]);
-
-  if (MeasureTime == 0 && I * I + Q * Q < threshold * threshold) // not turning
-    return 0;
-
-  StateI = I > 0;
-  StateQ = Q > 0;
-
-  unsigned long timeStart = micros();
-
-  while (micros() - timeStart < (MeasureTime != 0 ? MeasureTime : TIMEOUT))
+  while (true)
   {
-    I = analogRead(measurePin[0]); // - analogRead(measurePin[1]);
-    // Q = analogRead(measurePin[2]) - analogRead(measurePin[3]);
+    bool x = digitalRead(OFPhDPin);
+    phd = x;
 
-    if (I < threshold / 2)
-      StateI = LOW;
+    unsigned long t = micros();
 
-    if (StateI == LOW && I > threshold) // Detecte Edge on I
+    if (x && !StateHigh)
     {
-      StateI = HIGH;
-      if (timeEdgeI_P == 0)
-        timeEdgeI_P = micros();
-      else
-      {
-        speed = 1e6 / ((float)(micros() - timeEdgeI_P));
+      StateHigh = true;
+      interval = t - timeEdge;
 
-        if (speed > 100)
-        {
-          speed = prevSpeed > 0 ? speed : -speed;
-        }
-        else
-        {
-          Q = analogRead(measurePin[2]); // - analogRead(measurePin[3]);
-          if (Q < threshold / 2)
-            speed = -speed;
-        }
-        break;
-      }
+      SpeedM = TIME_TO_ROW / interval;
+      timeEdge = t;
     }
+
+    if (!x)
+      StateHigh = false;
+
+    if (t - timeEdge > 2 * interval)
+    {
+      interval = 2 * interval;
+      SpeedM = TIME_TO_ROW / interval;
+    }
+
+    delay(1);
   }
-
-  if (MeasureTime > 0)
-    while (micros() - timeStart < MeasureTime)
-      ;
-
-
-  prevSpeed = speed;
-  return speed; // not edge detected before Timout
 }
