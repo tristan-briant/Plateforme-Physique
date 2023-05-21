@@ -1,16 +1,16 @@
 #include <m5stack.h>
 
-void oneStep(int forward);
+void oneStep(float forward);
 void motor_init();
 void ReleaseMotor();
 float phase = 0;
+extern float power;
+extern float puissance;
 
 #define ANALOG_READ 1
 
 const int OFLedPin = 12; // Optical fork LED
 const int OFPhDPin = 34; // Photodiode
-
-const float TIME_TO_ROW = 1e6 / 20; // Speed in row per second
 
 const bool TWO_COILS = 1;
 const float thresholdHIGH = 50;
@@ -25,17 +25,19 @@ bool PosEdgeX, PosEdgeY;
 bool first;
 unsigned long TIMEOUT = 100000;
 
-int stepPerRow = 400;
-float Acc = 2e-4;
-float SpeedM, Speed, SpeedTarget; // step per sec
+// Speed in turn per second
+int stepPerRow = 100;
+float Acc = 0.1;                  // turn per sec^2
+float SpeedM, Speed, SpeedTarget; // row per sec
+
+// const float SensorPeriodToSpeed = 1.0e-2;  //100 ticks
+const float TIME_TO_ROW = 1.0e-2; // Speed in row per second speed(row per s) = TIME_TO_ROW / interval(second)
 
 unsigned long temp = 5000;
 int motorPin[] = {16, 5, 17, 2};
 
 float PeriodX, PeriodY;
 float x, y;
-
-float GetSpeed(unsigned long MeasureTime = 0);
 
 void TaskCycle(void *)
 {
@@ -63,18 +65,22 @@ void setup()
   motor_init();
 
   xTaskCreatePinnedToCore(TaskGUI, "", 4000, NULL, 1, NULL, 1);
-  xTaskCreatePinnedToCore(TaskMeasure, "", 4000, NULL, 1, NULL, 1);
+  // xTaskCreatePinnedToCore(TaskMeasure, "", 4000, NULL, 1, NULL, 1);
 
   pinMode(25, OUTPUT);
-  pinMode(enablePin, OUTPUT);
   digitalWrite(25, 0);
-  pinMode(OFLedPin, OUTPUT);
+
+  pinMode(enablePin, OUTPUT);
   digitalWrite(enablePin, HIGH);
-  //Speed = 100;
+
+  pinMode(OFPhDPin, INPUT);
+  pinMode(OFLedPin, OUTPUT);
+  digitalWrite(OFLedPin, HIGH);
 }
 
-bool phd;
+int phd;
 
+float coscos, sinsin;
 void TaskGUI(void *)
 {
 
@@ -82,63 +88,107 @@ void TaskGUI(void *)
   {
     M5.update();
 
-    if (M5.BtnA.wasPressed())
-      SpeedTarget -= 1;
+    if (M5.BtnA.wasPressed()||M5.BtnA.pressedFor(200))
+      SpeedTarget -= 0.01; 
+      //puissance-=0.01;    
     if (M5.BtnB.wasPressed())
-      SpeedTarget = 0;
-    if (M5.BtnC.wasPressed())
-      SpeedTarget += 1;
+      SpeedTarget = Speed = phase = 0;
+    if (M5.BtnC.wasPressed()||M5.BtnC.pressedFor(200))
+      SpeedTarget += 0.01;
+      //puissance+=0.01; 
 
     M5.Lcd.setCursor(0, 0);
-    M5.Lcd.printf("%5.2f   %5.2f   %5.2f     %5.2f", Speed, SpeedTarget, SpeedM,phase);
+    M5.Lcd.printf("%5.3f   %5.3f   %5.3f     %5.3f", Speed, SpeedTarget, SpeedM, puissance);
 
     M5.Lcd.setCursor(0, 20);
-    M5.Lcd.printf("%d", phd);
+    M5.Lcd.printf("%10d", phd);
+
+    float r = 50;
+    float x = r * coscos, y = r * sinsin;
+
+    M5.Lcd.fillCircle(160, 120, r, BLACK);
+    M5.Lcd.drawLine(160, 120, 160 + x, 120 + y, RED);
 
     Serial.println(SpeedM);
+    //SpeedTarget=0.01;
     delay(10);
   }
 }
 
 void loop()
 {
-  
-  int s;
-  while (true)
-  {
+  static unsigned long timeEdge;
+  static bool StateHigh = digitalRead(OFPhDPin);
+  static long interval;
 
-    // Time management
-    static long timeOld = micros();
-    long timeNew, deltaTime;
-    timeNew = micros();
-    deltaTime = timeNew - timeOld;
-    timeOld = timeNew;
-    /////////////////////////////
+  static float s = 0;
 
-    if (Speed < SpeedTarget)
-      Speed = min(SpeedTarget, Speed + Acc * deltaTime);
-    if (Speed > SpeedTarget)
-      Speed = max(SpeedTarget, Speed - Acc * deltaTime);
+  // Time management
+  static long timeOld = micros();
+  long timeNew;
+  float deltaTime;
+  timeNew = micros();
+  deltaTime = (timeNew - timeOld) * 1e-6;
+  timeOld = timeNew;
+  /////////////////////////////
 
-    phase += Speed * deltaTime/1e3;
+  if (Speed < SpeedTarget)
+    Speed = min(SpeedTarget, Speed + Acc * deltaTime);
+  if (Speed > SpeedTarget)
+    Speed = max(SpeedTarget, Speed - Acc * deltaTime);
 
-    if (s < phase)
-    {
-      oneStep(1);
-      s++;
-    }
-    else if (s > phase + 1)
-    {
-      oneStep(-1);
-      s--;
-    }
+  /*if (SpeedM < fabs(Speed) - 0.2 * fabs(SpeedTarget))
+    if (SpeedTarget > 0)
+      Speed = SpeedM;
     else
-      oneStep(0);
+      Speed = -SpeedM;
+*/
+  /*if (abs(Speed - SpeedTarget) > 0.01)
+    power = 1;
+  else
+  {
+    if (abs(SpeedTarget) < 1)
+      power = 0.5;
+    else if (abs(SpeedTarget) < 2)
+      power = 0.75;
+    else
+      power = 1;
+  }*/
+  if (SpeedTarget == 0)
+    power = 0;
+  else
+    power = 0.95;
 
-    delayMicroseconds(5);
+  oneStep((Speed * deltaTime) * stepPerRow);
+
+  //////////////////////////////////// Speed measurement//////////////////////////////////////
+
+  bool x = digitalRead(OFPhDPin);
+  phd = interval;
+  unsigned long t = micros();
+
+  if (!x)
+    StateHigh = false;
+
+  if (x && !StateHigh)
+  {
+    StateHigh = true;
+    interval = t - timeEdge;
+    const float alpha = 0.05;
+    SpeedM = alpha * SpeedM + (1 - alpha) * TIME_TO_ROW / interval * 1e6;
+    timeEdge = t;
   }
+
+  if (t - timeEdge > interval + 10000)
+  {
+    interval = interval + 10000;
+    SpeedM = TIME_TO_ROW / interval * 1e6;
+  }
+
+  delayMicroseconds(1);
 }
 
+/*
 void TaskMeasure(void *param)
 {
 
@@ -161,19 +211,20 @@ void TaskMeasure(void *param)
       StateHigh = true;
       interval = t - timeEdge;
 
-      SpeedM = TIME_TO_ROW / interval;
+      SpeedM = TIME_TO_ROW / interval * 1e6;
       timeEdge = t;
     }
 
     if (!x)
       StateHigh = false;
 
-    if (t - timeEdge > 2 * interval)
+    if (t - timeEdge > interval + 1000)
     {
-      interval = 2 * interval;
-      SpeedM = TIME_TO_ROW / interval;
+      interval = interval + 1000;
+      SpeedM = TIME_TO_ROW / interval * 1e6;
     }
 
     delay(1);
   }
 }
+*/

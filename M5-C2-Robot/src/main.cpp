@@ -1,104 +1,106 @@
 #include <M5core2.h>
 
-Button buttonOn(70, 30, 180, 180);
+const int ButtonSize = 180;
 
-TFT_eSprite img = TFT_eSprite(&M5.Lcd);
+Button buttonOn((320 - ButtonSize) / 2, 30, ButtonSize, ButtonSize);
+
+TFT_eSprite imgButOn = TFT_eSprite(&M5.Lcd);
+TFT_eSprite imgButOff = TFT_eSprite(&M5.Lcd);
+TFT_eSprite banner = TFT_eSprite(&M5.Lcd);
+
 /////// Pin Config //////////
 int PinMotor1[] = {25, 26, 13, 14};
 int PinMotor2[] = {32, 33, 27, 19};
 
-// TaskHandle_t taskGUI;
 
 const int N = 1000;
 int TEMP = 2000;
 
 bool motorOn;
 
-void drawPlay(Button &b, ButtonColors bc)
-{
-    img.fillRoundRect(b.x, b.y, b.w, b.h, 10, DARKGREY);
 
-  if (motorOn)
-  {
-    img.fillRect(b.x + b.w / 4, b.y + b.h / 4, b.w / 2, b.h / 2, RED);
-  }
-  else
-  {
-    img.fillTriangle(b.x + 0.3*b.w , b.y + b.h / 4,
-                     b.x + 0.3*b.w , b.y + 3 * b.h / 4,
-                     b.x + 3*b.w / 4, b.y + b.h / 2, GREEN);
-  }
-}
 
 void loopGUI(void *param)
 {
+  u_long t0 = 0, t1;
 
   /// Setup
 
-  img.setColorDepth(8);
-  img.setTextColor(TFT_WHITE);
-  img.createSprite(320, 240);
+  // Button images creation
+  imgButOn.setColorDepth(8);
+  imgButOn.createSprite(ButtonSize, ButtonSize);
 
-  ///
+  imgButOff.setColorDepth(8);
+  imgButOff.createSprite(ButtonSize, ButtonSize);
+
+  imgButOff.fillRoundRect(0, 0, ButtonSize, ButtonSize, 10, DARKGREY);
+  imgButOff.fillRect(ButtonSize / 4, ButtonSize / 4, ButtonSize / 2, ButtonSize / 2, RED);
+
+  imgButOn.fillRoundRect(0, 0, ButtonSize, ButtonSize, 10, DARKGREY);
+  imgButOn.fillTriangle(0.3 * ButtonSize, ButtonSize / 4,
+                        0.3 * ButtonSize, 3 * ButtonSize / 4,
+                        3 * ButtonSize / 4, ButtonSize / 2, GREEN);
+
+  imgButOn.pushSprite((320 - ButtonSize) / 2, 30);
+
+  // Banner image creation
+  char str[100];
+  banner.setColorDepth(8);
+  banner.setTextColor(TFT_WHITE);
+  banner.createSprite(320, 20);
 
   while (true) // never return
   {
-
+    t1 = millis();
     M5.update();
-
-    img.setFreeFont(&FreeSans12pt7b);
-    img.fillSprite(BLACK);
-
-    char str[100];
-    float vb = M5.Axp.GetBatVoltage();
-    float ib = M5.Axp.GetBatCurrent();
-
-    sprintf(str,"Batt: %3d%%  %4.2fV  %6.1fmA  ", (int)((vb - 3.2) * 100), vb, ib);
-    img.drawString(str,0,0);
-
-    /*M5.Lcd.setCursor(0, 0);
-
-    float vb = M5.Axp.GetBatVoltage();
-    float ib = M5.Axp.GetBatCurrent();
-
-    M5.Lcd.printf("Batterie %3d%%, voltage= %4.2fV  courant=%6.2fmA  ", (int)((vb - 3.2) * 100), vb, ib);
-
-    M5.Lcd.setCursor(0, 20);
-    M5.Lcd.printf("35 :  %4d   36:  %4d", analogRead(35), analogRead(36));
-*/
-    buttonOn.draw();
-    img.pushSprite(0, 0);
 
     ///// Handle buttons ////
 
-    // if (M5.BtnA.wasPressed())
-    if (buttonOn.wasPressed())
+    if (buttonOn.wasReleased())
     {
       motorOn = !motorOn;
+      if (motorOn)
+        imgButOff.pushSprite((320 - ButtonSize) / 2, 30);
+      else
+        imgButOn.pushSprite((320 - ButtonSize) / 2, 30);
     }
 
-    delay(10);
+    // Redraw Banner
+
+    if (t1 - t0 > 200UL)
+    {
+      float vb = M5.Axp.GetBatVoltage();
+      float ib = M5.Axp.GetBatCurrent();
+
+      sprintf(str, "Batt: %3d%%  %4.2fV  %6.1fmA  ", (int)((vb - 3.2) * 100), vb, ib);
+
+      banner.setFreeFont(&FreeSans12pt7b);
+      banner.fillSprite(BLACK);
+      banner.drawString(str, 0, 0);
+
+      banner.pushSprite(0, 0);
+      t0 = t1;
+    }
+
+    delay(1);
   }
 }
 
 void setup()
 {
-  buttonOn.drawFn = drawPlay;
+  Serial.begin(115200);
 
   M5.begin(true, false, false, false);
-  M5.Lcd.print("coucou");
-
+ 
   for (int i = 0; i < 4; i++)
   {
     pinMode(PinMotor1[i], OUTPUT);
     pinMode(PinMotor2[i], OUTPUT);
   }
 
-  pinMode(35, INPUT_PULLDOWN);
+  //pinMode(35, INPUT_PULLDOWN);
 
   M5.Axp.SetCHGCurrent(4);
-
-  buttonOn.draw();
 
   xTaskCreatePinnedToCore(loopGUI, "Task GUI", 4000, NULL, 0, NULL, 0);
 }
