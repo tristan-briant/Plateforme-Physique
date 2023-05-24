@@ -23,6 +23,13 @@ void loopGUI(void *param)
   M5.Lcd.drawString("-", 158, 210);
   M5.Lcd.drawString("+", 250, 210);
 
+  img.setFreeFont(&FreeSans24pt7b);
+  img.setTextSize(2);
+  int a1 = img.textWidth("0.00");
+  int a2 = img.textWidth("10.00");
+  int b1 = img.textWidth("-0.00");
+  int b2 = img.textWidth("-10.00");
+
   while (true)
   {
     float inc = 0;
@@ -30,10 +37,10 @@ void loopGUI(void *param)
 
     M5.update();
 
-    if (M5.BtnB.wasPressed() || M5.BtnB.pressedFor(300, 25))
-      inc = -0.02;
-    if (M5.BtnC.wasPressed() || M5.BtnC.pressedFor(300, 25))
-      inc = 0.02;
+    if (M5.BtnB.wasPressed() || M5.BtnB.pressedFor(300, 10))
+      inc = -0.01;
+    if (M5.BtnC.wasPressed() || M5.BtnC.pressedFor(300, 10))
+      inc = 0.01;
     if (M5.BtnA.wasPressed())
       speed = 0;
 
@@ -43,17 +50,28 @@ void loopGUI(void *param)
     img.setTextColor(TFT_WHITE);
     img.setTextDatum(BL_DATUM);
     img.setFreeFont(&FreeSans24pt7b);
-
     img.setTextSize(2);
     sprintf(str, "%.2f", speed);
-    int a = img.textWidth(str);
+
+    int a;
+    if (speed <= -10)
+      a = b2;
+    else if (speed < 0)
+      a = b1;
+    else if (speed < 10)
+      a = a1;
+    else
+      a = a2;
+
     img.drawString(str, 240 - a, 100);
+
+    img.setTextDatum(BL_DATUM);
     img.setTextSize(1);
     img.drawString("t/s", 245, 92);
 
     img.pushSprite(0, 60);
 
-    delay(10);
+    delay(5);
   }
 }
 
@@ -74,26 +92,26 @@ void loop()
   static long t0 = micros();
   long t1 = micros();
   long deltat = t1 - t0;
-  static long phase;
+  t0 = t1;
+  static long phase = 0;
 
   if (speed == 0)
   {
     digitalWrite(PinEnable, HIGH);
-    //phase = t;
   }
   else
   {
     digitalWrite(PinEnable, LOW);
     digitalWrite(PinDir, speed > 0);
+  }
 
-    long tt = fabs(speed) * SPEED2TIME * deltat;
-
-    if (t > phase + tt)
-    {
-      digitalWrite(PinStep, HIGH);
-      delayMicroseconds(1);
-      digitalWrite(PinStep, LOW);
-      phase += tt;
-    }
+  phase += fabs(speed) * 200.0 * 32.0 * (float)deltat;
+  // phase += (float)deltat * 10;
+  if (phase > 1e6)
+  {
+    digitalWrite(PinStep, HIGH);
+    delayMicroseconds(1);
+    digitalWrite(PinStep, LOW);
+    phase -= 1e6;
   }
 }
