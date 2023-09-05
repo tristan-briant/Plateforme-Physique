@@ -4,7 +4,7 @@
 const int NSTEP_MAX = 32 * 13; // 32 step per tooth (64*8 for 360°)
 int motor_x, motor_y;
 int target_x, target_y;
-const int TEMP = 1200; // time in µs for 1/4 step
+const int TEMP = 1000; // time in µs for 1/4 step
 int BackLash = 5;
 
 int PinMotor[] = {16, 17, 2, 5};
@@ -23,7 +23,7 @@ const int IMAG_SIZE = 200;
 TFT_eSprite img = TFT_eSprite(&M5.Lcd);
 
 ///// Scan parameters
-const int ScanSize = NSTEP_MAX * 0.8;
+const int ScanSize = NSTEP_MAX * 0.55;
 const int NLines = 25;
 float data[IMAG_SIZE][NLines];
 
@@ -234,7 +234,7 @@ void step(int motor, int nstep)
 
   for (int k = 0; k < nstep; k++)
   {
-    if (direction > 0)
+    if (direction < 0)
       for (int i = 0; i < 4; i++)
       {
         digitalWrite(PinMotor[i], HIGH);
