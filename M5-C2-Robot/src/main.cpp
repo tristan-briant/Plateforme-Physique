@@ -23,6 +23,7 @@ bool motorLeftOn;
 bool motorRightOn;
 
 bool LeftInput, RightInput;
+bool falte;
 
 enum RunMode
 {
@@ -74,29 +75,64 @@ void loopGUI(void *param)
   {
     t1 = millis();
     M5.update();
+    bool redraw = false;
 
     ///// Handle buttons ////
 
     if (buttonOn.pressedFor(1000))
     {
       mode = RunMode::Test;
-      imgButTest.pushSprite((320 - ButtonSize) / 2, 30);
+      redraw = true;
     }
 
     if (buttonOn.wasPressed())
     {
-
       if (mode != RunMode::Idle)
         mode = RunMode::Idle;
       else
         mode = RunMode::Run;
-
-      // motorOn = !motorOn;
-      if (mode == RunMode::Idle)
-        imgButOff.pushSprite((320 - ButtonSize) / 2, 30);
-      else if (mode == RunMode::Run)
-        imgButOn.pushSprite((320 - ButtonSize) / 2, 30);
+      redraw = true;
     }
+
+    float vbus = M5.Axp.GetVBusVoltage();
+    if (vbus < 1.0)
+    {
+      if (!falte)
+      {
+        falte = true;
+        // redraw = false;
+        M5.Lcd.fillRect(10, 50, 310, 140, RED);
+        M5.Lcd.textbgcolor = RED;
+        M5.Lcd.textdatum = MC_DATUM;
+        M5.Lcd.setFreeFont(&FreeSans12pt7b);
+        M5.Lcd.drawString("Court-circuit", 320 / 2, 240 / 2 - 10);
+        M5.Lcd.drawString("sur l'alimentation", 320 / 2, 240 / 2 + 10);
+      }
+    }
+    else
+    {
+      if (falte)
+      {
+        falte = false;
+        M5.Lcd.fillRect(10, 30, 310, 210, BLACK);
+        redraw = true;
+      }
+    }
+
+    if (redraw && !falte)
+      switch (mode)
+      {
+      case RunMode::Idle:
+        imgButOff.pushSprite((320 - ButtonSize) / 2, 30);
+        break;
+      case RunMode::Run:
+        imgButOn.pushSprite((320 - ButtonSize) / 2, 30);
+        break;
+      case RunMode::Test:
+        imgButTest.pushSprite((320 - ButtonSize) / 2, 30);
+      default:
+        break;
+      }
 
     // Redraw Banner
 
@@ -120,7 +156,7 @@ void loopGUI(void *param)
     M5.Lcd.fillCircle(300, 220, 10, RightInput ? WHITE : DARKGREY);
     M5.Lcd.fillCircle(20, 220, 10, LeftInput ? WHITE : DARKGREY);
 
-    delay(1);
+    delay(10);
   }
 }
 
