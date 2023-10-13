@@ -94,6 +94,9 @@ void loopGUI(void *param)
       redraw = true;
     }
 
+    if(M5.BtnB.isPressed())
+      M5.Axp.PowerOff();
+
     float vbus = M5.Axp.GetVBusVoltage();
     if (vbus < 1.0)
     {
@@ -156,6 +159,9 @@ void loopGUI(void *param)
     M5.Lcd.fillCircle(300, 220, 10, RightInput ? WHITE : DARKGREY);
     M5.Lcd.fillCircle(20, 220, 10, LeftInput ? WHITE : DARKGREY);
 
+    M5.Lcd.drawCircle(160,230,9,RED);
+    M5.Lcd.drawLine(160,230-5,160,230+5,RED);
+
     delay(10);
   }
 }
@@ -192,6 +198,8 @@ void setup()
   Serial.begin(115200);
 
   M5.begin(true, false, false, false);
+
+  //M5.Axp.SetCHGCurrent(100); #teste for the usb C but not working
 
   for (int i = 0; i < 4; i++)
   {
