@@ -29,7 +29,8 @@ enum RunMode
 {
   Idle,
   Run,
-  Test
+  Test,
+  Move
 };
 
 RunMode mode = RunMode::Idle;
@@ -81,7 +82,7 @@ void loopGUI(void *param)
 
     if (buttonOn.pressedFor(1000))
     {
-      mode = RunMode::Test;
+      mode = RunMode::Move;
       redraw = true;
     }
 
@@ -96,6 +97,24 @@ void loopGUI(void *param)
 
     if(M5.BtnB.isPressed())
       M5.Axp.PowerOff();
+
+      if(M5.BtnA.isPressed()){
+        mode = RunMode::Test;
+        motorLeftOn = true;
+        motorRightOn = false;
+        redraw = true;
+      }
+      if(M5.BtnC.isPressed()){
+        mode = RunMode::Test;
+        motorLeftOn = false;
+        motorRightOn = true;
+        redraw = true;
+      }
+
+      if(M5.BtnA.wasReleased() || M5.BtnC.wasReleased()){
+        mode = RunMode::Idle;
+        redraw = true;
+      }
 
     float vbus = M5.Axp.GetVBusVoltage();
     if (vbus < 1.0)
@@ -132,6 +151,7 @@ void loopGUI(void *param)
         imgButOn.pushSprite((320 - ButtonSize) / 2, 30);
         break;
       case RunMode::Test:
+      case RunMode::Move:
         imgButTest.pushSprite((320 - ButtonSize) / 2, 30);
       default:
         break;
@@ -156,8 +176,8 @@ void loopGUI(void *param)
       t0 = t1;
     }
 
-    M5.Lcd.fillCircle(300, 220, 10, RightInput ? WHITE : DARKGREY);
-    M5.Lcd.fillCircle(20, 220, 10, LeftInput ? WHITE : DARKGREY);
+    M5.Lcd.fillCircle(265, 230, 10, RightInput || motorRightOn ? WHITE : DARKGREY);
+    M5.Lcd.fillCircle(55, 230, 10, LeftInput || motorLeftOn ? WHITE : DARKGREY);
 
     M5.Lcd.drawCircle(160,230,9,RED);
     M5.Lcd.drawLine(160,230-5,160,230+5,RED);
@@ -177,16 +197,14 @@ void loopEye(void *param)
 
     if (mode == RunMode::Idle)
       motorLeftOn = motorRightOn = false;
-    else if (mode == RunMode::Test)
+
+    if (mode == RunMode::Move)
       motorLeftOn = motorRightOn = true;
-    else // if (mode == RunMode::Run)
+    
+    if (mode == RunMode::Run)
     {
       motorLeftOn = LeftInput;
       motorRightOn = RightInput;
-    }
-
-    {
-      /* code */
     }
 
     delay(10);
