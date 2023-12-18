@@ -8,6 +8,7 @@ float speed = 0;
 const float MAXSPEED = 10;
 
 const float SPEED2TIME = 200 * 32;
+long synchro = 0;
 
 void loopGUI(void *param)
 {
@@ -71,6 +72,7 @@ void loopGUI(void *param)
 
     img.pushSprite(0, 60);
 
+    dacWrite(26, 127 * (1 + sin(synchro * 1e-6)));
     delay(5);
   }
 }
@@ -81,6 +83,9 @@ void setup()
   pinMode(PinDir, OUTPUT);
   pinMode(PinStep, OUTPUT);
   pinMode(PinEnable, OUTPUT);
+  pinMode(25, OUTPUT); // quiet speaker
+  pinMode(26, OUTPUT);
+  dacWrite(26, 200);
 
   digitalWrite(PinEnable, LOW);
   xTaskCreatePinnedToCore(loopGUI, "GUI", 4000, NULL, 0, NULL, 0);
@@ -106,6 +111,12 @@ void loop()
   }
 
   phase += fabs(speed) * 200.0 * 32.0 * (float)deltat;
+  synchro += 2 * PI * fabs(speed) * (float)deltat;
+  if (synchro > 2 * PI * 1e6)
+    synchro -= 2 * PI * 1e6;
+  if (synchro < -2 * PI * 1e6)
+    synchro += 2 * PI * 1e6;
+
   // phase += (float)deltat * 10;
   if (phase > 1e6)
   {
@@ -113,5 +124,9 @@ void loop()
     delayMicroseconds(1);
     digitalWrite(PinStep, LOW);
     phase -= 1e6;
+
+    /*dacWrite(26, 127 * (1 + sin(sync * 1e-6)));
+
+    */
   }
 }
