@@ -97,8 +97,8 @@ void cb(uint /*gpio*/, uint32_t /*event_mask*/)
   if (Serial1.available())
   {
     Serial1.read();
-    //Serial1.flush();
-    // Serial1.write(255);                // byte d'amorce
+    // Serial1.flush();
+    //  Serial1.write(255);                // byte d'amorce
     Serial1.write((uint8_t)(i / 256)); // On profite que le core1 est dipso pour faire la communication série
     Serial1.write((uint8_t)(i % 256)); // On profite que le core1 est dipso pour faire la communication série
 
@@ -187,6 +187,9 @@ void setup()
 
   PWM1->setPWM(21, 40000, 50);
   PWM2->setPWM(6, Freq, 50);
+
+  PWM1->setPWM(13, 1000000, 50);
+
 
   // trop compliqué de calculer soit même les freq et wrap ---> aboutit à des désychros de l'ADC
   /*int pin = 6;
@@ -325,9 +328,7 @@ void loopTask(uint /*gpio*/, uint32_t /*event_mask*/)
   distance = constrain(50 + -(turnTotal - turnTotal0) * 4.25f * factor, 0, 100.0f);
   PWMQ->setPWM(14, 100000, distance);
 
-  
 #ifdef DEBUG_PULSE
   gpio_put(4, 0);
 #endif
- 
 }
