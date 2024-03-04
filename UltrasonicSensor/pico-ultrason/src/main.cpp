@@ -35,10 +35,13 @@ float distance;
 #define Freq 4000
 
 ///////////// Gain selection //////////////////////////
+//
+const float UM100_TO_VOLT = 1000.0f / 3.25f;
 const float MM_TO_VOLT = 100.0f / 3.25f;
 const float MM5_TO_VOLT = 20.0f / 3.25f;
 const float CM_TO_VOLT = 10.0f / 3.25f;
 const float CM5_TO_VOLT = 2.0f / 3.25f;
+const float CM10_TO_VOLT = 1.0f / 3.25f;
 
 float factor = 0;
 
@@ -190,7 +193,6 @@ void setup()
 
   PWM1->setPWM(13, 1000000, 50);
 
-
   // trop compliqué de calculer soit même les freq et wrap ---> aboutit à des désychros de l'ADC
   /*int pin = 6;
   gpio_set_function(pin, GPIO_FUNC_PWM);
@@ -317,15 +319,23 @@ void loopTask(uint /*gpio*/, uint32_t /*event_mask*/)
   // GainSelection = 0;
 
   if (GainSelection == 0)
-    factor = MM_TO_VOLT;
+    factor = UM100_TO_VOLT;
   if (GainSelection == 1)
-    factor = MM5_TO_VOLT;
+    factor = MM_TO_VOLT;
   if (GainSelection == 2)
     factor = CM_TO_VOLT;
   if (GainSelection == 3)
-    factor = CM5_TO_VOLT;
+    factor = CM10_TO_VOLT;
 
   distance = constrain(50 + -(turnTotal - turnTotal0) * 4.25f * factor, 0, 100.0f);
+
+  /* Test de bande passante
+  float t = millis() / 1000.0;
+  int f = 1<<((int)t % 10);
+  distance = 50 + 50 * sin(2 * PI * f * t);
+  //distance = 50;
+  */
+
   PWMQ->setPWM(14, 100000, distance);
 
 #ifdef DEBUG_PULSE
