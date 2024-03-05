@@ -43,6 +43,14 @@ const float CM_TO_VOLT = 10.0f / 3.25f;
 const float CM5_TO_VOLT = 2.0f / 3.25f;
 const float CM10_TO_VOLT = 1.0f / 3.25f;
 
+enum OUTPUT_MODE
+{
+  AC_MODE,
+  DC_MODE
+};
+
+OUTPUT_MODE output_mode = DC_MODE;
+
 float factor = 0;
 
 const int pinGain1 = 19;
@@ -53,7 +61,7 @@ float I, Q;
 float turn = 0;
 float turn_frac, turnTotal, turnTotal0 = 0;
 float turnTotal_avg = 0;
-const float epsilon = 0.1;
+const float epsilon = 0.25;
 
 uint16_t capture_buf[CAPTURE_DEPTH];
 
@@ -303,31 +311,50 @@ void loopTask(uint /*gpio*/, uint32_t /*event_mask*/)
   if (Q < 0 && Q_old >= 0 && I < 0)
     turn++;
 
+  Q_old = Q;
+  I_old = I;
+
   turnTotal = turn + turn_frac;
   turnTotal_avg = epsilon * turnTotal + (1 - epsilon) * turnTotal_avg;
 
   if (countDown)
   {
-    turnTotal0 = turnTotal;
+    turnTotal0 = turnTotal_avg;
     countDown--;
   }
 
-  Q_old = Q;
-  I_old = I;
 
   uint8_t GainSelection = digitalRead(pinGain1) + 2 * digitalRead(pinGain2);
   // GainSelection = 0;
 
   if (GainSelection == 0)
+  {
     factor = UM100_TO_VOLT;
+    output_mode = AC_MODE;
+  }
   if (GainSelection == 1)
+  {
     factor = MM_TO_VOLT;
+    output_mode = DC_MODE;
+  }
   if (GainSelection == 2)
+  {
     factor = CM_TO_VOLT;
+    output_mode = DC_MODE;
+  }
   if (GainSelection == 3)
+  {
     factor = CM10_TO_VOLT;
+    output_mode = DC_MODE;
+  }
 
-  distance = constrain(50 + -(turnTotal - turnTotal0) * 4.25f * factor, 0, 100.0f);
+  const float dt = 1.0 / Freq ; //(AC 1Hz)
+  if (output_mode==AC_MODE)
+  {
+    turnTotal0 = dt * (turnTotal_avg) + (1 - dt) * (turnTotal0);
+  }
+
+  distance = constrain(50 + -(turnTotal_avg - turnTotal0) * 4.25f * factor, 0, 100.0f);
 
   /* Test de bande passante
   float t = millis() / 1000.0;
