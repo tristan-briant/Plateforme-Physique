@@ -1,6 +1,6 @@
 #include <M5Unified.h>
 #include <button.h> // Home made mini lib to emulate button from M5core2 not present in M5Unified
-#include <phyphoxBle.h>
+//#include <phyphoxBle.h>
 
 const gpio_num_t PinDir = GPIO_NUM_19;
 const gpio_num_t PinStep = GPIO_NUM_33;

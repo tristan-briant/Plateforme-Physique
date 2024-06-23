@@ -2,6 +2,7 @@
 #include "SlowSerial.h"
 #include "pref-util.h"
 #include <EEPROM.h>
+#include <driver/ledc.h>
 
 // #include <SoftwareSerial.h>
 
@@ -70,6 +71,7 @@ uint16_t color565(uint8_t red, uint8_t green, uint8_t blue)
 }
 
 void loopGUI(void *param);
+void loopMain(void *param);
 
 Button lt(0, YPosSpeedLine, 120, 80, false, "a");
 Button rt(120, YPosSpeedLine, 120, 80, false, "b");
@@ -140,7 +142,6 @@ void ButtonHandler(Event &e)
 
   redraw = true;
   paramToBeChanged = true;
-  ;
 }
 
 void change_parameter()
@@ -150,16 +151,22 @@ void change_parameter()
   {
     HalfPeriod_us = (unsigned long)(0.5 * 1e6 / (float)Freq[FreqSelect]);
     SerialS.begin(0);
-  }
 
-  if (ModeSelect == BLINK)
-  {
-    SerialS.begin(0);
+    if (LaserBlink)
+    {
+      ledcSetup(0, Freq[FreqSelect], 10);
+      ledcAttachPin(27, 0);
+      ledcWrite(0, 512);
+    }
+    else
+      ledcDetachPin(27);
+
     ButLaserBlink.draw();
     ButLaserOnOff.draw();
   }
   else
   {
+    ledcDetachPin(27);
     ButLaserBlink.hide();
     ButLaserOnOff.hide();
   }
@@ -212,7 +219,6 @@ void setup()
   M5.Buttons.addHandler(ButtonHandler, E_TOUCH);
 
   paramToBeChanged = true;
-  // change_parameter();
 
   xTaskCreatePinnedToCore(loopGUI, "Task GUI", 4000, NULL, 0, NULL, 0);
 }
@@ -236,35 +242,18 @@ void loop()
 
   switch (ModeSelect)
   {
-    // case ONOFF:
-    //  Nothing to do, handled in change_parameter
-    // break;
-
   case OFF:
     delay(10);
     break;
-    
+
   case BLINK:
 
-    if (LaserBlink)
-    {
-      if (t_us - tOld_us > HalfPeriod_us)
-      { // Toggle laser
-        digitalWrite(27, state);
-        M5.Axp.SetLed(state);
-
-        state = !state;
-        // tOld_us += HalfPeriod_us;
-        tOld_us = micros();
-      }
-    }
-    else
+    if (!LaserBlink)
     {
       digitalWrite(27, LaserOn);
-      M5.Axp.SetLed(LaserOn);
-      delay(10);
     }
-
+    // M5.Axp.SetLed(gpio_get_level(GPIO_NUM_27));
+    delay(10);
     break;
 
   case TRANSMITTER:
@@ -274,7 +263,7 @@ void loop()
     if (SerialS.write(msg[indexRXTX]))
       indexRXTX = (indexRXTX + 1) % 14;
   }
-    delay(1);
+    delay(2);
     break;
   case RECEIVER:
   {
@@ -282,7 +271,6 @@ void loop()
 
     if (c != 0)
     {
-      // newCharAvailable = true;
       if (c == 9 || c == 10 || c == 13)
         c = 32;
       else if (c < 20 || c >= 127)
@@ -302,11 +290,11 @@ void loop()
         StringRX[13] = c;
       }
     }
-    delay(1);
+    delay(2);
   }
   break;
   case REPEATER:
-    delay(1);
+    delay(2);
     if (indexToSend < indexRXTX)
     { // Character to send
       if (SerialS.write(StringTX[indexToSend]))
@@ -323,11 +311,9 @@ void loop()
         else if (c < 20 || c >= 127)
           c = '?';
 
-        // if (c < 20)
-        // newCharAvailable = true;
         wifiWrite(c);
-
         // Serial.print(c);
+
         if (indexRXTX < 14)
         {
           StringRX[indexRXTX] = c;
@@ -348,8 +334,7 @@ void loop()
     char c = wifiAvailable(); // Serial.read();
     if (c < ' ')              // Si le caractère n'est imprimable on ne l'imprime pas
       break;
-    // Serial.print((int)c);
-    // Serial.print(" ");
+
     if (indexRXTX < 14)
     {
       StringTX[indexRXTX] = c;
@@ -368,22 +353,6 @@ void loop()
   }
 
   vbus = M5.Axp.GetVBusVoltage();
-
-  /*char c = 0;
-
-  if (Serial.available())
-  {
-    c = Serial.read();
-    Serial2.print(c);
-  }
-
-  if (Serial2.available())
-  {
-    c = Serial2.read();
-    M5.Lcd.print(c);
-  }
-
-  delay(10);*/
 }
 
 void loopGUI(void *param)
@@ -528,26 +497,20 @@ void loopGUI(void *param)
 
       if (ModeSelect == REPEATER)
       {
-        // M5.Lcd.fillRect(0, ButtonSizeY, 240, 320 - 2 * ButtonSizeY, BLACK);
         sprintf(str, "%s", getDeviceName());
         M5.Lcd.fillRect(0, ButtonSizeY, 240, 320 - 2 * ButtonSizeY, BLACK);
-        // imgBannerRX.fillSprite(BLACK);
-        // imgBannerRX.drawRoundRect(0, 0, 240, 70, 10, DARKGREEN);
+
         M5.Lcd.setTextDatum(CL_DATUM);
         M5.Lcd.textbgcolor = BLACK;
         M5.Lcd.setFreeFont(&FreeSans9pt7b);
         M5.Lcd.drawString("Se connecter sur", 10, 90);
         M5.Lcd.setFreeFont(&FreeSans12pt7b);
         M5.Lcd.drawString(str, 10, 130);
-        // M5.Lcd.drawString("Dans un navigateur", 10, 160);
+
         M5.Lcd.drawString("192.168.4.1", 10, 160);
         M5.Lcd.setFreeFont(&FreeSans9pt7b);
 
         M5.Lcd.drawString("Desactiver donnees mobiles", 10, 200);
-        // M5.Lcd.drawString("Desactiver donnees mobiles", 10, 200);
-        // M5.Lcd.drawString("et autres reseaux", 10, 220);
-
-        // M5.Lcd.pushSprite(0, 160 - 35);
       }
 
       if (ModeSelect == OFF)
@@ -610,6 +573,6 @@ void loopGUI(void *param)
     // sprintf(str, "%10d", deltat);
     // M5.Lcd.drawString(str, 10, 10);
 
-    delay(25);
+    // delay(5);
   }
 }

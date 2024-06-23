@@ -24,7 +24,7 @@ int SlowSerial::write(char b)
         if (k < 0)
         {
             Periode = 1e6 / comSpeed;
-            digitalWrite(txpin, HIGH); // bit d'amorçe
+            gpio_set_level(txpin, HIGH); // bit d'amorçe
             M5.Axp.SetLed(1);
             nextT = t + Periode;
             k = 0;
@@ -34,7 +34,7 @@ int SlowSerial::write(char b)
         if (k < 8)
         {
             bool bit = !(b & 1 << k);
-            digitalWrite(txpin, bit); // next bit
+            gpio_set_level(txpin, bit); // next bit
             M5.Axp.SetLed(bit);
             nextT = nextT + Periode;
             k++;
@@ -42,7 +42,8 @@ int SlowSerial::write(char b)
         }
         else
         {
-            digitalWrite(txpin, LOW);
+            
+            gpio_set_level(txpin, LOW);
             M5.Axp.SetLed(0);
 
             k = -1;
@@ -78,7 +79,7 @@ char SlowSerial::read()
     {
         Periode = 1e6 / comSpeed;
         c = 0;
-        bool inputB = digitalRead(rxpin);
+        bool inputB = gpio_get_level(rxpin);
         // M5.Axp.SetLed(inputB);
 
         if (inputB == LOW) // attend un front montant
@@ -93,7 +94,7 @@ char SlowSerial::read()
 
     if (t > nextT) // next bit
     {
-        bool inputB = digitalRead(rxpin);
+        bool inputB = gpio_get_level(rxpin);
         M5.Axp.SetLed(inputB);
 
         if (k < 8)
@@ -117,8 +118,8 @@ char SlowSerial::read()
 void SlowSerial::begin(long baud, int RXpin, int TXpin, bool inv)
 {
     comSpeed = baud;
-    rxpin = RXpin;
-    txpin = TXpin;
+    rxpin = (gpio_num_t)RXpin;
+    txpin = (gpio_num_t)TXpin;
     inverse = inv;
 
     if (comSpeed < 300)
@@ -129,7 +130,7 @@ void SlowSerial::begin(long baud, int RXpin, int TXpin, bool inv)
         if (txpin > 0)
             pinMode(txpin, OUTPUT);
 
-        digitalWrite(txpin, 0);
+        gpio_set_level(txpin, 0);
     }
     else
     {
