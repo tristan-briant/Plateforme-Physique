@@ -57,6 +57,7 @@ double iset = 0;
 
 // void loopMesure(void *param);
 void loopGUI(void *param);
+void loopComunication(void *param);
 
 uint16_t color565(uint8_t r, uint8_t g, uint8_t b)
 {
@@ -94,17 +95,17 @@ void setup()
   cfg.serial_baudrate = 115200;
   M5Dial.begin(cfg, true, false);
 
-  Serial1.begin(115200);
+  //Serial1.begin(115200);
   M5.begin();
   Serial.begin(115200);
   Serial.println("start");
   M5Dial.Speaker.setVolume(30);
   init_encoder();
 
-  Serial.println(sizeof(char));
+  /*Serial.println(sizeof(char));
   Serial.println(sizeof(int));
 
-  Serial.println(sizeof(long long));
+  Serial.println(sizeof(long long));*/
   millis();
 
   EEPROM.begin(EEPROM_SIZE);
@@ -141,6 +142,7 @@ void setup()
 
   // xTaskCreatePinnedToCore(loopMesure, "", 2000, NULL, 0, NULL, 0);
   xTaskCreatePinnedToCore(loopGUI, "", 2000, NULL, 0, NULL, 0);
+  xTaskCreatePinnedToCore(loopComunication, "", 4000, NULL, 1, NULL, 0);
 
   img.createSprite(240, 240);
 }
@@ -180,12 +182,12 @@ void loopGUI(void *) // on core 1
       locked = false;
     }
 
-    if (Serial.available())
+    /*if (Serial.available())
     {
       if (Serial.read() == 't')
         TEST_PWM = true;
       power = 0;
-    }
+    }*/
 
     if (buttonScreen.wasPressed())
     {
@@ -232,11 +234,11 @@ void loopGUI(void *) // on core 1
 
       if (fabs(voltage_print - voltage) > 0.5)
         voltage_print = voltage;
-    
-          // voltage_print = (float)t / 1e6;
-          // isens_print = (float)t_test / 1e6;
 
-          sprintf(str, "%d.%03dA   %2d.%01dV", (int)(isens_print / 1000), ((int)isens_print % 1000), (int)voltage_print, ((int)(voltage_print * 10) % 10));
+      // voltage_print = (float)t / 1e6;
+      // isens_print = (float)t_test / 1e6;
+
+      sprintf(str, "%d.%03dA   %2d.%01dV", (int)(isens_print / 1000), ((int)isens_print % 1000), (int)voltage_print, ((int)(voltage_print * 10) % 10));
       t_old = t;
       // Serial.println(duty_cycle, 1);
 
@@ -338,11 +340,11 @@ void loop()
     unsigned long t_new = micros();
     if (t_new < t_old || (t_old > t_old + 200UL)) // overflow
     {
-      Serial.println("overflow");
+      /*Serial.println("overflow");
       Serial.println(t_old);
       Serial.println(t_new);
 
-      Serial.println();
+      Serial.println();*/
       t_old = t_new;
     }
 
