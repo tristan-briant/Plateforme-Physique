@@ -169,7 +169,7 @@ void loopGUI(void *) // on core 1
         M5Dial.Speaker.tone(6000, 20);
       else
         M5Dial.Speaker.tone(5000, 20);*/
-      power = constrain(power + x, 0, MaxPWM);
+      power = constrain(power + x, 0, PMAX);
       locked = false;
     }
 
