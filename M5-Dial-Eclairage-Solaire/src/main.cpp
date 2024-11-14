@@ -43,7 +43,7 @@ const int freqPWM = 78000;
 double isens, isens_HR;
 float IMAX = 1500;                // Imax (mA)
 float PMAX = 100;                 // Max Power (%)
-int PWM_MAX = 350;                // duty cycle max
+int PWM_MAX = 400;                // duty cycle max
 double gain = PWM_MAX * 1e-6;     // Fast Gain achieve PWM_MAX in 1s
 double gain_HR = PWM_MAX * 10e-9; // HR Gain achieve PWM_MAX in 100s
 
@@ -95,7 +95,7 @@ void setup()
   cfg.serial_baudrate = 115200;
   M5Dial.begin(cfg, true, false);
 
-  //Serial1.begin(115200);
+  // Serial1.begin(115200);
   M5.begin();
   Serial.begin(115200);
   Serial.println("start");
@@ -405,8 +405,10 @@ void loop()
         else
           countdown = 0;
 
-        // if (iset > 100)
-        duty_cycle += gain_HR * delta_t * constrain(iset - isens_HR, -100, 100);
+        if (iset <= 1)
+          duty_cycle = 0;
+        else
+          duty_cycle += gain_HR * delta_t * constrain(iset - isens_HR, -100, 100);
         // else
         //   duty_cycle -= gain_HR * (t_new - t_old) * (isens_HR - iset) / 10.0;
       }
