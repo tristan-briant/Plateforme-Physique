@@ -214,7 +214,7 @@ void setup()
 
   initWIFI();
 
-  Serial2.begin(100, SERIAL_8N1, 19, 27, true);
+  Serial2.begin(600, SERIAL_8N1, 19, 27, true);
   Serial.begin(115200);
   M5.Buttons.addHandler(ButtonHandler, E_TOUCH);
 

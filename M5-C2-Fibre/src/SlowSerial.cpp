@@ -7,14 +7,23 @@ int SlowSerial::write(char b)
     static int k = -1; // numéro du bit
     static long Periode = 1e6 / comSpeed;
 
-    if (comSpeed >= 300) // Si la vitesse est grande on utilise le software serial
-    {
-        Serial2.write(b);
-        delay(100);
-        return 1;
-    }
+    static long t_old = 0;
 
     long t = micros();
+
+    if (comSpeed >= 300) // Si la vitesse est grande on utilise le software serial
+    {
+        if (t > t_old + 100000)
+        {
+            Serial2.write(b);
+            t_old = t;
+            //delay(50);
+            return 1;
+        }
+
+        // delay(100);
+        return 0;
+    }
 
     if (t > nextT + 2 * Periode) // il y a eu un bug on reset
         k = -1;
@@ -42,7 +51,7 @@ int SlowSerial::write(char b)
         }
         else
         {
-            
+
             gpio_set_level(txpin, LOW);
             M5.Axp.SetLed(0);
 
@@ -136,7 +145,10 @@ void SlowSerial::begin(long baud, int RXpin, int TXpin, bool inv)
     {
         // pinMode(rxpin, INPUT);
         // pinMode(txpin, OUTPUT);
-        Serial2.begin(baud, SERIAL_8N1, rxpin, txpin, inv);
+        // delay(100);
+        Serial2.end();
+        Serial2.begin(baud, SERIAL_8N1, 19, txpin, inv);
         // Serial2.begin(baud, SERIAL_8N1, 19, 27, true);
+        // delay(100);
     }
 }
