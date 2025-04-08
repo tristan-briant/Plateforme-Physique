@@ -215,7 +215,7 @@ void setup()
 {
   Serial.begin(115200);
 
-  M5.begin(true, false, false, false);
+  M5.begin(true, false, true, false);
 
   //M5.Axp.SetCHGCurrent(100); #teste for the usb C but not working
 

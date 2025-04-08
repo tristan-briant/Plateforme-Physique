@@ -5,10 +5,10 @@
 #define __TC_VERSION__ "V0.1"
 
 void save_value(const char *name, const char *key, double data);
-void save_tuning(PID pid1, PID pid2);
-void load_tuning(PID *pid1, PID *pid2);
+void save_tuning(PID pid1);  //, PID pid2);
+void load_tuning(PID *pid1); //, PID *pid2);
 
-extern PID pid1, pid2;
+extern PID pid1;//, pid2;
 extern double temp1, temp2, tset1, tset2;
 
 SCPI_Parser my_instrument;
@@ -19,6 +19,7 @@ void Identify(SCPI_C commands, SCPI_P parameters, Stream &interface)
     interface.print(F("Temperature Controller, "));
     interface.println(F(__TC_VERSION__));
 }
+
 void getTemp(SCPI_C commands, SCPI_P parameters, Stream &interface)
 {
     if (parameters.Size() == 0 || String(parameters[0]).toInt() == 1)
@@ -32,12 +33,12 @@ void getTunings(SCPI_C commands, SCPI_P parameters, Stream &interface)
     String last_header = String(commands.Last());
     last_header.toUpperCase();
 
-    PID *pidselect = NULL;
+    PID *pidselect = &pid1;
 
-    if (parameters.Size() > 0 && String(parameters[0]) == "2")
+    /*if (parameters.Size() > 0 && String(parameters[0]) == "2")
         pidselect = &pid2;
     else
-        pidselect = &pid1;
+        pidselect = &pid1;*/
 
     if (last_header == "GP?")
         interface.printf("%.5f\n", pidselect->GetKp());
@@ -53,17 +54,17 @@ void setTunings(SCPI_C commands, SCPI_P parameters, Stream &interface)
 {
     String last_header = String(commands.Last());
     last_header.toUpperCase();
-    PID *pidselect = NULL;
+    PID *pidselect = &pid1;
 
     if (parameters.Size() == 0)
         return;
 
     double newValue = String(parameters[0]).toFloat();
 
-    if (parameters.Size() > 1 && String(parameters[1]) == "2")
+    /*if (parameters.Size() > 1 && String(parameters[1]) == "2")
         pidselect = &pid2;
     else
-        pidselect = &pid1;
+        pidselect = &pid1;*/
 
     if (last_header == "TSET")
     {
@@ -87,24 +88,24 @@ void setTunings(SCPI_C commands, SCPI_P parameters, Stream &interface)
         pidselect->SetTunings(pidselect->GetKp(), pidselect->GetKi(), newValue);
     else if (last_header.startsWith("DIR"))
         pidselect->SetControllerDirection(newValue > 0 ? 1 : -1);
-    save_tuning(pid1, pid2);
+    save_tuning(pid1); //, pid2);
 }
 
 void setLimits(SCPI_C commands, SCPI_P parameters, Stream &interface)
 {
     String last_header = String(commands.Last());
     last_header.toUpperCase();
-    PID *pidselect = NULL;
+    PID *pidselect = &pid1;
 
     if (parameters.Size() == 0)
         return;
 
     double newValue = String(parameters[0]).toFloat();
 
-    if (parameters.Size() > 1 && String(parameters[1]) == "2")
+    /*if (parameters.Size() > 1 && String(parameters[1]) == "2")
         pidselect = &pid2;
     else
-        pidselect = &pid1;
+        pidselect = &pid1;*/
 
     double max, min;
 
@@ -130,7 +131,7 @@ void setLimits(SCPI_C commands, SCPI_P parameters, Stream &interface)
     save_value("PID2", "OUTMAX", pid2.GetOutMax());
     save_value("PID2", "OUTMIN", pid2.GetOutMin());*/
 
-    save_tuning(pid1, pid2);
+    save_tuning(pid1); //, pid2);
 }
 
 void getLimits(SCPI_C commands, SCPI_P parameters, Stream &interface) {}
