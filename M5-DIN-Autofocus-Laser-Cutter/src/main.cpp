@@ -50,7 +50,8 @@ enum ModeRun
   MOTOR_MOVING,
   MOTOR_BREAK,
   MOTOR_RELEASED,
-  AUTOFOCUS
+  AUTOFOCUS,
+  LEARNING
 };
 ModeRun mode_run;
 
@@ -102,9 +103,15 @@ void loop()
   if (mode_run == ModeRun::AUTOFOCUS && ContactPen)
   {
     mode_run = ModeRun::MOTOR_MOVING;
-    // speed = 0;
     x_position = Z_PEN_HEIGHT;
     s = x_mustep = MICROSTEP_BY_MM * x_position;
+    x_target = 0;
+  }
+  else if (mode_run == ModeRun::LEARNING && ContactPen)
+  {
+    save_ZPEN(x_position);
+    mode_run = ModeRun::MOTOR_MOVING;
+    // s = x_mustep = MICROSTEP_BY_MM * x_position;
     x_target = 0;
   }
   else if ((ZLimitUP || ContactPen) && x_position < x_target)
@@ -185,11 +192,13 @@ void loopGUI(void *param)
   int c_enc;
   char str[20];
 
-  int color1 = color565(255, 128, 0);   // Orange
-  int color2 = color565(100, 100, 100); // Gris
-  int color4 = color565(200, 200, 200); // Gris clair
-  int color3 = color565(255, 0, 0);     // RED
-  int color5 = color565(50, 50, 50);    // Gris
+  int color1 = color565(255, 128, 0);    // Orange
+  int color2 = color565(100, 100, 100);  // Gris
+  int color4 = color565(200, 200, 200);  // Gris clair
+  int color3 = color565(255, 0, 0);      // RED
+  int color5 = color565(50, 50, 50);     // Gris
+  int colorFocus = color565(190, 95, 0); // Orange foncé
+  int colorLearn = color565(0, 150, 0);  // Vert
 
   long t_blink = 0;
   bool blink;
@@ -247,9 +256,14 @@ void loopGUI(void *param)
     // set the ZPEN HEIGH
     if (M5.BtnA.pressedFor(3000) && !longpressed)
     {
-      save_ZPEN(x_position);
-      Z_PEN_HEIGHT = load_ZPEN();
       M5.Speaker.tone(3000, 100);
+      StopMotor();
+      ResetPosition = true;
+      delay(100);
+      mode_run = LEARNING;
+      x_target = 20;
+      // save_ZPEN(x_position);
+      // Z_PEN_HEIGHT = load_ZPEN();
       longpressed = true;
     }
     if (M5.BtnA.wasReleased())
@@ -278,6 +292,11 @@ void loopGUI(void *param)
 
     int colsquare = DiplayStop ? color3 : color1;
 
+    if (mode_run == ModeRun::AUTOFOCUS)
+      colsquare = colorFocus;
+    if (mode_run == ModeRun::LEARNING)
+      colsquare = colorLearn;
+
     img.fillScreen(BLACK);
     img.drawXBitmap(0, 0, arrowUP_bits, 80, 120, (ZLimitUP || ContactPen) ? color5 : color1);
     img.drawXBitmap(0, 120, arrowDOWN_bits, 80, 120, ZLimitDOWN ? color5 : color1);
@@ -299,6 +318,11 @@ void loopGUI(void *param)
     {
       img.setFont(&FreeSansBold18pt7b);
       img.drawString("FOCUS", 96 + 64, 120);
+    }
+    else if (mode_run == ModeRun::LEARNING)
+    {
+      img.setFont(&FreeSansBold18pt7b);
+      img.drawString("SET", 96 + 64, 120);
     }
     else
     {
