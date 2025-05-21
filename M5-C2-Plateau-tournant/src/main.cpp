@@ -8,6 +8,7 @@ const gpio_num_t PinEnable = GPIO_NUM_14;
 const gpio_num_t SYNC_Pin = GPIO_NUM_26;
 const gpio_num_t SYNC_REF_Pin = GPIO_NUM_25;
 
+const float SPEED_LEDC = 15;    //speed to change to ledc mode
 bool modeLEDC = false;
 
 double angle = 0, speed = 0, acc = 0.1;
@@ -64,13 +65,13 @@ void setup()
   M5.begin(cfg);
   Serial.begin(115200);
 
-  //ledcSetup(0, SPEED2TIME, 8);
+  // ledcSetup(0, SPEED2TIME, 8);
 
-  //ledcChangeFrequency(0, SPEED2TIME, 8);
+  // ledcChangeFrequency(0, SPEED2TIME, 8);
 
-  //ledcWrite(0, 1);
-  //ledcAttachPin(PinStep, 0);
-  //modeLEDC = true;
+  // ledcWrite(0, 1);
+  // ledcAttachPin(PinStep, 0);
+  // modeLEDC = true;
 
   pinMode(PinDir, OUTPUT);
   pinMode(PinStep, OUTPUT);
@@ -113,6 +114,11 @@ void loop()
 
   if (delta > 10000)
   {
+
+    if (mode_run == MOTOR_BREAK && fabs(speed) <= 0.0001)
+    { // le plateau est à l'arrêt on relâche le moteur
+      mode_run = MOTOR_RELEASED;
+    }
 
     if (mode_run == MOTOR_RELEASED)
     {
@@ -162,12 +168,12 @@ void loop()
       }
     }
 
-    gpio_set_level(PinDir, speed > 0);
+    gpio_set_level(PinDir, speed < 0); // 0 -> CCW 1->CW
 
     t_old = t;
   }
 
-  if (fabs(speed) > 100) // ok never happen...
+  if (fabs(speed) > SPEED_LEDC) // ok never happen...
   {
     uint32_t freq = fabs(speed) * SPEED2TIME;
 
@@ -198,6 +204,7 @@ void loop()
       modeLEDC = false;
       t_edge = t;
     }
+
     if (fabs(speed) > 0)
     {
       period = 1e6 / fabs(speed) / SPEED2TIME;

@@ -1,6 +1,6 @@
 #include <M5Unified.h>
 #include <button.h> // Home made mini lib to emulate button from M5core2 not present in M5Unified
-//#include <phyphoxBle.h>
+// #include <phyphoxBle.h>
 
 const gpio_num_t PinDir = GPIO_NUM_19;
 const gpio_num_t PinStep = GPIO_NUM_33;
@@ -13,7 +13,7 @@ const float MAXSPEED = 10;
 const float SPEED2TIME = 200 * 32;
 long synchro = 0;
 
-void TaskGUI(void* param);
+void TaskGUI(void *param);
 
 enum ModeRun
 {
@@ -41,8 +41,6 @@ const float Radius = 10;
 const int STEP_BY_TURN = 100;
 const float MICROSTEP_BY_MM = MicroStep * STEP_BY_TURN / (2 * PI * Radius);
 
-
-
 void TaskOffset(void *pvParameters)
 {
   // Simple task for a smooth offset
@@ -65,7 +63,6 @@ void TaskOffset(void *pvParameters)
     delay(1);
   }
 }
-
 
 void setup()
 {
@@ -186,7 +183,7 @@ void loop()
 
   if (t - t_dac > 500)
   {
-    float y = s / MICROSTEP_BY_MM / amp - offset;
+    float y = sin(phase); // s / MICROSTEP_BY_MM / amp - offset;
     dacWrite(SYNC_Pin, 128 + 127 * y);
     t_dac = t;
   }
