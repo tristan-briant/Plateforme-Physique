@@ -96,8 +96,8 @@ void loop()
 
   sensor = readMCP();
   // sensor = 0;
-  ZLimitDOWN = sensor & Z_LIMIT_DOWN_MASK;
-  ZLimitUP = sensor & Z_LIMIT_UP_MASK;
+  ZLimitDOWN = !(sensor & Z_LIMIT_DOWN_MASK);
+  ZLimitUP = !(sensor & Z_LIMIT_UP_MASK);
   ContactPen = sensor & PEN_MASK;
 
   if (mode_run == ModeRun::AUTOFOCUS && ContactPen)
@@ -111,6 +111,7 @@ void loop()
   {
     save_ZPEN(x_position);
     mode_run = ModeRun::MOTOR_MOVING;
+    Z_PEN_HEIGHT = x_position;
     // s = x_mustep = MICROSTEP_BY_MM * x_position;
     x_target = 0;
   }
@@ -359,9 +360,9 @@ void loopGUI(void *param)
 
     if (blink)
     {
-      if (sensor & Z_LIMIT_UP_MASK)
+      if (!(sensor & Z_LIMIT_UP_MASK))
         img.drawString("LIMIT UP", 120, 20);
-      if (sensor & Z_LIMIT_DOWN_MASK)
+      if (!(sensor & Z_LIMIT_DOWN_MASK))
         img.drawString("LIMIT DOWN", 120, 20);
       if (sensor & PEN_MASK)
         img.drawString("PEN", 120, 20);
