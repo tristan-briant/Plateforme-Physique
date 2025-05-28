@@ -116,7 +116,6 @@ void draw(int part = -1)
         img.fillRoundRect(320 * 5 / 6 - 50, 2, 100, 46, 15, color565(60));
         img.drawRoundRect(320 * 5 / 6 - 50, 2, 100, 46, 15, colorSelection);
         img.drawString("Free", 160 + 80, 25);
-    
 
         img.pushSprite(0, 150);
     }
@@ -160,7 +159,7 @@ void TaskGUI(void *pvParameters)
 
     img.createSprite(320, 50); // Create a 320x240 canvas
 
-    //buttonFree.draw();
+    // buttonFree.draw();
 
     draw();
     delay(50);
@@ -171,7 +170,7 @@ void TaskGUI(void *pvParameters)
 
         M5.update();
 
-        if (M5.BtnB.isPressed() && M5.BtnC.isPressed())
+        if (buttonOffsetSelec.pressedFor(2000))
         {
             offsetCal = offsetTarget;
             draw();
@@ -212,6 +211,7 @@ void TaskGUI(void *pvParameters)
             selection = 2;
             draw();
         }
+
         if (buttonOn.wasPressed())
         {
             if (mode_run == ModeRun::SINUS)

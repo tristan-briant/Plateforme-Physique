@@ -36,9 +36,9 @@ float offsetTarget = 0, offsetCal = 0;
 bool isOn = true;
 float FREQ_MAX = 100, AMPL_MAX = 2000;
 
-int MicroStep = 64;
+int MicroStep = 32;
 const float Radius = 10;
-const int STEP_BY_TURN = 100;
+const int STEP_BY_TURN = 400;
 const float MICROSTEP_BY_MM = MicroStep * STEP_BY_TURN / (2 * PI * Radius);
 
 void TaskOffset(void *pvParameters)
@@ -46,8 +46,8 @@ void TaskOffset(void *pvParameters)
   // Simple task for a smooth offset
   long t_old = micros();
 
-  float speedMax = 50 * 1e-6; // en mm/µs
-  float speed = 50 * 1e-6;    // en mm/µs
+  float speedMax = 5 * 1e-6; // en mm/µs
+  float speed = 5 * 1e-6;    // en mm/µs
 
   while (true)
   {
@@ -166,7 +166,7 @@ void loop()
 
   if (s < x)
   {
-    gpio_set_level(PinDir, HIGH);
+    gpio_set_level(PinDir, LOW);
     gpio_set_level(PinStep, HIGH);
     delayMicroseconds(1);
     gpio_set_level(PinStep, LOW);
@@ -174,7 +174,7 @@ void loop()
   }
   else if (s > x + 1)
   {
-    gpio_set_level(PinDir, LOW);
+    gpio_set_level(PinDir, HIGH);
     gpio_set_level(PinStep, HIGH);
     delayMicroseconds(1);
     gpio_set_level(PinStep, LOW);
@@ -184,7 +184,7 @@ void loop()
   if (t - t_dac > 500)
   {
     float y = sin(phase); // s / MICROSTEP_BY_MM / amp - offset;
-    dacWrite(SYNC_Pin, 128 + 127 * y);
+    dacWrite(SYNC_Pin, 128 + 116 * y);
     t_dac = t;
   }
 }
