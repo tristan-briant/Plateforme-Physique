@@ -115,7 +115,10 @@ void draw(int part = -1)
         // img.setFont(mode_run == MOTOR_RELEASED ? &FreeSansBold12pt7b : &FreeSans12pt7b);
         img.fillRoundRect(320 * 5 / 6 - 50, 2, 100, 46, 15, color565(60));
         img.drawRoundRect(320 * 5 / 6 - 50, 2, 100, 46, 15, colorSelection);
-        img.drawString("Free", 160 + 80, 25);
+        if (mode_run == MOTOR_RELEASED)
+            img.drawString("Lock", 160 + 80, 25);
+        else
+            img.drawString("Free", 160 + 80, 25);
 
         img.pushSprite(0, 150);
     }
@@ -151,7 +154,7 @@ void TaskGUI(void *pvParameters)
 
     Button buttonOn(0, 150, 107, 50);
     Button buttonOff(107, 150, 107, 50);
-    Button buttonFree(214, 150, 106, 50, color565(60), colorSelection, "free");
+    Button buttonFree(214, 150, 106, 50); //, color565(60), colorSelection, "free");
 
     // Button buttonSelect(0, 200, 107, 50);
     Button buttonMinus(0, 200, 107, 50);
@@ -225,9 +228,12 @@ void TaskGUI(void *pvParameters)
             mode_run = ModeRun::PULSE;
             draw(3);
         }
-        if (buttonFree.isPressed())
+        if (buttonFree.wasPressed())
         {
-            mode_run = ModeRun::MOTOR_RELEASED;
+            if (mode_run == ModeRun::MOTOR_RELEASED)
+                mode_run = ModeRun::MOTOR_BREAK;
+            else
+                mode_run = ModeRun::MOTOR_RELEASED;
             draw(3);
         }
 
@@ -242,7 +248,7 @@ void TaskGUI(void *pvParameters)
                 amp = constrain(amp + constrain(inc, -2, +2) * 0.1, 0, AMPL_MAX);
                 break;
             case 2:
-                offsetTarget += constrain(inc, -1, +1) * 0.5;
+                offsetTarget += constrain(inc, -1, +1) * 0.2;
                 break;
             }
             draw(selection);

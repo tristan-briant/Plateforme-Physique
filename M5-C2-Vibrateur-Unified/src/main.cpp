@@ -46,13 +46,13 @@ void TaskOffset(void *pvParameters)
   // Simple task for a smooth offset
   long t_old = micros();
 
-  float speedMax = 5 * 1e-6; // en mm/µs
-  float speed = 5 * 1e-6;    // en mm/µs
+  // float speedMax = 50 * 1e-6; // en mm/µs
+  float speed_offset = 5 * 1e-6; // en mm/µs
 
   while (true)
   {
     long t = micros();
-    float dx = speed * (t - t_old);
+    float dx = speed_offset * (t - t_old);
 
     if (offset < offsetTarget)
       offset += dx;
@@ -60,7 +60,7 @@ void TaskOffset(void *pvParameters)
       offset -= dx;
 
     t_old = t;
-    delay(1);
+    delay(10);
   }
 }
 
@@ -70,30 +70,7 @@ void setup()
   cfg.output_power = false;
   M5.begin(cfg);
   Serial.begin(115200);
-  // axp192.SetBusPowerMode(kMBusModeInput);
-  // M5.begin(true, true, true, true, kMBusModeInput, true);
-  // M5.Axp.begin();
-  // comment ligne "axp192.begin();" in Axp.cpp (ligne 113)
-
-  // Wire1.begin(21, 22);
-  // Wire1.setClock(100000);
-  /*M5.Axp.SetESPVoltage(3350);
-  Serial.printf("axp: esp32 power voltage was set to 3.35v\n");
-
-  M5.Axp.SetLcdVoltage(2800);
-  Serial.printf("axp: lcd backlight voltage was set to 2.80v\n");
-
-  M5.Axp.SetLDOVoltage(2, 3300); // Periph power voltage preset (LCD_logic, SD card)
-  Serial.printf("axp: lcd logic and sdcard voltage preset to 3.3v\n");
-
-  M5.Axp.SetLDOVoltage(3, 2000); // Vibrator power voltage preset
-  Serial.printf("axp: vibrator voltage preset to 2v\n");
-
-  M5.Axp.SetLDOEnable(2, true);
-  M5.Axp.SetDCDC3(true); // LCD backlight
-  M5.Axp.SetLed(true);
-  M5.Axp.SetDCDC3(true);
-  M5.Lcd.begin();*/
+  M5.Lcd.setBrightness(255);
 
   pinMode(PinDir, OUTPUT);
   pinMode(PinStep, OUTPUT);
@@ -101,7 +78,6 @@ void setup()
   pinMode(SYNC_Pin, OUTPUT);
   pinMode(SYNC_REF_Pin, OUTPUT);
 
-  // pinMode(25, OUTPUT); // quiet speaker
   mode_run = ModeRun::MOTOR_RELEASED;
 
   pinMode(26, OUTPUT);
@@ -109,16 +85,8 @@ void setup()
 
   dacWrite(SYNC_REF_Pin, 128);
 
-  // img.createSprite(320, 240); // Create a 320x240 canvas
-
-  Serial.begin(115200);
-
-  M5.Lcd.setBrightness(255);
-
   xTaskCreatePinnedToCore(TaskGUI, "Task1", 20000, NULL, 1, &Task1, 0);
-  xTaskCreatePinnedToCore(TaskOffset, "Task2", 20000, NULL, 1, &Task2, 0);
-
-  // draw();
+  //xTaskCreatePinnedToCore(TaskOffset, "Task2", 20000, NULL, 1, &Task2, 0);
 }
 
 void loop()
@@ -131,6 +99,14 @@ void loop()
   static long t_dac = t;
 
   static float phase = 0;
+  float speed_offset = 20 * 1e-6; // en mm/µs
+
+  float dx = speed_offset * (t - t_old);
+
+  if (offset < offsetTarget)
+    offset += dx;
+  else if (offset >= offsetTarget + dx)
+    offset -= dx;
 
   if (mode_run == MOTOR_RELEASED)
   {
@@ -181,10 +157,12 @@ void loop()
     s--;
   }
 
+  delayMicroseconds(1);
+
   if (t - t_dac > 500)
   {
-    float y = sin(phase); // s / MICROSTEP_BY_MM / amp - offset;
-    dacWrite(SYNC_Pin, 128 + 116 * y);
+    float y = sin(phase);              // s / MICROSTEP_BY_MM / amp - offset;
+    dacWrite(SYNC_Pin, 128 + 116 * y); // 116 =>1.5V d'amplitude (éviter 127 car saturation)
     t_dac = t;
   }
 }

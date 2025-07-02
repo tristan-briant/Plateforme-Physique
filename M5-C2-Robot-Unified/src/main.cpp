@@ -24,6 +24,8 @@ int PinLeftEye = 35;
 
 const int N = 1000;
 int TEMP = 1800;
+int TEMPMIN = 1500;
+int tempo = 0;
 
 bool motorLeftOn;
 bool motorRightOn;
@@ -348,23 +350,30 @@ void loop()
     {
       target_achieved = false;
       cc1 = (c1 + directionRight) % 4;
-      digitalWrite(p1[c1], HIGH);
-      digitalWrite(p1[cc1], HIGH);
+      gpio_set_level(p1[c1], HIGH);
+      gpio_set_level(p1[cc1], HIGH);
       c1 = cc1;
       xright = xright + directionRight;
     }
+    else
+      tempo = TEMP;
 
     if (xleft != xleft_target)
     {
       target_achieved = false;
       cc2 = (c2 - directionLeft) % 4; /// Signe moins : Moteur inversé
-      digitalWrite(p2[c2], HIGH);
-      digitalWrite(p2[cc2], HIGH);
+      gpio_set_level(p2[c2], HIGH);
+      gpio_set_level(p2[cc2], HIGH);
       c2 = cc2;
       xleft = xleft + directionLeft;
     }
+    else
+      tempo = TEMP;
 
-    delayMicroseconds(TEMP);
+    tempo--;
+    tempo = constrain(tempo, TEMPMIN, TEMP);
+
+    delayMicroseconds(tempo);
 
     for (int i = 0; i < 4; i++)
     {
@@ -380,11 +389,5 @@ void loop()
         gpio_set_level(p2[i], LOW);
       }
     }
-
-    /*if (target_achieved == false && xleft == xleft_target && xright == xright_target)
-    {
-      send_message_flag = true;
-      target_achieved = true;
-    }*/
   }
 }
