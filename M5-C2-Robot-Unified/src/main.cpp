@@ -58,7 +58,7 @@ MoteurMode Mmode = MoteurMode::Speed;
 
 void set_target_mm(float xr, float xl)
 {
-  Mmode = MoteurMode::Speed;
+  Mmode = MoteurMode::Position;
   mode = RunMode::Remote;
 
   xleft = xright = 0;
@@ -342,20 +342,11 @@ void loop()
     /******************* MODE POSITION   **************************/
     if (Mmode == MoteurMode::Position)
     {
-<<<<<<< Updated upstream
-      target_achieved = false;
-      cc1 = (c1 + directionRight) % 4;
-      gpio_set_level(p1[c1], HIGH);
-      gpio_set_level(p1[cc1], HIGH);
-      c1 = cc1;
-      xright = xright + directionRight;
-=======
       directionLeft = xleft < xleft_target ? 1 : -1;
       directionRight = xright < xright_target ? 1 : -1;
 
       if (xright != xright_target)
       {
-        target_achieved = false;
         c = c1;
         gpio_set_level(p1[c], HIGH);
         c = (c + directionRight) % 4;
@@ -367,10 +358,16 @@ void loop()
         c1 = (c1 + directionRight) % 4;
         xright = xright + directionRight;
       }
+      else
+      {
+        gpio_set_level(p1[0], LOW);
+        gpio_set_level(p1[1], LOW);
+        gpio_set_level(p1[2], LOW);
+        gpio_set_level(p1[3], LOW);
+      }
 
       if (xleft != xleft_target)
       {
-        target_achieved = false;
         c = c2;
         gpio_set_level(p2[c], HIGH);
         c = (c - directionLeft) % 4; /// Signe moins : Moteur inversé
@@ -382,43 +379,30 @@ void loop()
         c2 = (c2 - directionLeft) % 4; /// Signe moins : Moteur inversé
         xleft = xleft + directionLeft;
       }
+      else
+      {
+        gpio_set_level(p2[0], LOW);
+        gpio_set_level(p2[1], LOW);
+        gpio_set_level(p2[2], LOW);
+        gpio_set_level(p2[3], LOW);
+      }
+
+      target_achieved = xright == xright_target && xleft == xleft_target;
 
       delayMicroseconds(TEMP);
->>>>>>> Stashed changes
     }
-    else
-      tempo = TEMP;
 
     /******************* MODE SPEED   **************************/
     if (Mmode == MoteurMode::Speed)
     {
-<<<<<<< Updated upstream
-      target_achieved = false;
-      cc2 = (c2 - directionLeft) % 4; /// Signe moins : Moteur inversé
-      gpio_set_level(p2[c2], HIGH);
-      gpio_set_level(p2[cc2], HIGH);
-      c2 = cc2;
-      xleft = xleft + directionLeft;
-    }
-    else
-      tempo = TEMP;
+      long t = micros();
 
-    tempo--;
-    tempo = constrain(tempo, TEMPMIN, TEMP);
+      directionLeft = v_left > 0 ? 1 : -1;
+      directionRight = v_right > 0 ? 1 : -1;
 
-    delayMicroseconds(tempo);
-
-    for (int i = 0; i < 4; i++)
-    {
-      gpio_set_level(p1[i], LOW);
-      gpio_set_level(p2[i], LOW);
-=======
-      directionLeft = v_left >= 0 ? 1 : -1;
-      directionRight = v_right >= 0 ? 1 : -1;
-
-      if (fabs(v_right) >= 0.01f)
+      if (v_right != 0)
       {
-        if (t - t_old_r > TEMP / fabs(v_right))
+        if (t > t_old_r + TEMP / fabs(v_right))
         {
           c = c1;
           gpio_set_level(p1[c], HIGH);
@@ -428,15 +412,22 @@ void loop()
           gpio_set_level(p1[c], LOW);
           c = (c + directionRight) % 4;
           gpio_set_level(p1[c], LOW);
-
           c1 = (c1 + directionRight) % 4;
+          xright = xright + directionRight;
           t_old_r = t;
         }
       }
-
-      if (fabs(v_left) >= 0.01f)
+      else
       {
-        if (t - t_old_l > TEMP / fabs(v_left))
+        gpio_set_level(p1[0], LOW);
+        gpio_set_level(p1[1], LOW);
+        gpio_set_level(p1[2], LOW);
+        gpio_set_level(p1[3], LOW);
+      }
+
+      if (v_left != 0)
+      {
+        if (t > t_old_l + TEMP / fabs(v_left))
         {
           c = c2;
           gpio_set_level(p2[c], HIGH);
@@ -447,12 +438,24 @@ void loop()
           c = (c - directionLeft) % 4;
           gpio_set_level(p2[c], LOW);
           c2 = (c2 - directionLeft) % 4; /// Signe moins : Moteur inversé
+          xleft = xleft + directionLeft;
           t_old_l = t;
         }
       }
->>>>>>> Stashed changes
+      else
+      {
+        gpio_set_level(p2[0], LOW);
+        gpio_set_level(p2[1], LOW);
+        gpio_set_level(p2[2], LOW);
+        gpio_set_level(p2[3], LOW);
+      }
+
+      target_achieved = false;
+
+      // delayMicroseconds(TEMP);
     }
 
+    
     /******************* MODE IDLE   **************************/
     if (mode == RunMode::Idle)
     {
@@ -465,11 +468,15 @@ void loop()
         gpio_set_level(p1[i], LOW);
         gpio_set_level(p2[i], LOW);
       }
-<<<<<<< Updated upstream
-=======
 
-      delayMicroseconds(TEMP);
->>>>>>> Stashed changes
+       delayMicroseconds(TEMP);
     }
+
+
+
+    // tempo--;
+    //tempo = constrain(tempo, TEMPMIN, TEMP);
+
+    //delayMicroseconds(tempo);
   }
 }

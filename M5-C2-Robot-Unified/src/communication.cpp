@@ -14,8 +14,8 @@ SCPI_Parser my_instrument;
 
 void Identify(SCPI_C commands, SCPI_P parameters, Stream &interface)
 {
-    Serial.print("Robot, ");
-    Serial.println(__TS_VERSION__);
+    //Serial.print("Robot, ");
+    //Serial.println(__TS_VERSION__);
     interface.print(F("Robot, "));
     interface.println(F(__TS_VERSION__));
 }

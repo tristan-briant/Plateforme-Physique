@@ -16,8 +16,8 @@ M5Canvas imgButTest(&M5.Lcd);
 M5Canvas banner(&M5.Lcd);
 
 /////// Pin Config //////////
-gpio_num_t PinMotor1[] = {GPIO_NUM_25, GPIO_NUM_26, GPIO_NUM_13, GPIO_NUM_14};
-gpio_num_t PinMotor2[] = {GPIO_NUM_32, GPIO_NUM_33, GPIO_NUM_27, GPIO_NUM_19};
+gpio_num_t PinMotor1[] = {GPIO_NUM_5, GPIO_NUM_9, GPIO_NUM_18, GPIO_NUM_17};
+gpio_num_t PinMotor2[] = {GPIO_NUM_2, GPIO_NUM_1, GPIO_NUM_6, GPIO_NUM_7};
 
 int PinRightEye = 36;
 int PinLeftEye = 35;
@@ -342,14 +342,13 @@ void loop()
     /******************* MODE POSITION   **************************/
     if (Mmode == MoteurMode::Position)
     {
-<<<<<<< Updated upstream
       target_achieved = false;
       cc1 = (c1 + directionRight) % 4;
       gpio_set_level(p1[c1], HIGH);
       gpio_set_level(p1[cc1], HIGH);
       c1 = cc1;
       xright = xright + directionRight;
-=======
+
       directionLeft = xleft < xleft_target ? 1 : -1;
       directionRight = xright < xright_target ? 1 : -1;
 
@@ -384,7 +383,6 @@ void loop()
       }
 
       delayMicroseconds(TEMP);
->>>>>>> Stashed changes
     }
     else
       tempo = TEMP;
@@ -392,7 +390,6 @@ void loop()
     /******************* MODE SPEED   **************************/
     if (Mmode == MoteurMode::Speed)
     {
-<<<<<<< Updated upstream
       target_achieved = false;
       cc2 = (c2 - directionLeft) % 4; /// Signe moins : Moteur inversé
       gpio_set_level(p2[c2], HIGH);
@@ -412,7 +409,6 @@ void loop()
     {
       gpio_set_level(p1[i], LOW);
       gpio_set_level(p2[i], LOW);
-=======
       directionLeft = v_left >= 0 ? 1 : -1;
       directionRight = v_right >= 0 ? 1 : -1;
 
@@ -450,7 +446,6 @@ void loop()
           t_old_l = t;
         }
       }
->>>>>>> Stashed changes
     }
 
     /******************* MODE IDLE   **************************/
@@ -465,11 +460,9 @@ void loop()
         gpio_set_level(p1[i], LOW);
         gpio_set_level(p2[i], LOW);
       }
-<<<<<<< Updated upstream
-=======
+
 
       delayMicroseconds(TEMP);
->>>>>>> Stashed changes
     }
   }
 }
