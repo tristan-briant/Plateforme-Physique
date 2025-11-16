@@ -16,11 +16,11 @@ M5Canvas imgButTest(&M5.Lcd);
 M5Canvas banner(&M5.Lcd);
 
 /////// Pin Config //////////
-gpio_num_t PinMotor1[] = {GPIO_NUM_25, GPIO_NUM_26, GPIO_NUM_13, GPIO_NUM_14};
-gpio_num_t PinMotor2[] = {GPIO_NUM_32, GPIO_NUM_33, GPIO_NUM_27, GPIO_NUM_19};
+gpio_num_t PinMotor2[] = {GPIO_NUM_25, GPIO_NUM_26, GPIO_NUM_13, GPIO_NUM_14};
+gpio_num_t PinMotor1[] = {GPIO_NUM_32, GPIO_NUM_33, GPIO_NUM_27, GPIO_NUM_19};
 
-int PinRightEye = 36;
-int PinLeftEye = 35;
+int PinRightEye = 35;
+int PinLeftEye = 36;
 
 const int N = 1000;
 int TEMP = 1800;
@@ -56,24 +56,24 @@ enum MoteurMode
 RunMode mode = RunMode::Idle;
 MoteurMode Mmode = MoteurMode::Speed;
 
-void set_target_mm(float xr, float xl)
+void set_target_mm(float xl, float xr)
 {
   Mmode = MoteurMode::Position;
   mode = RunMode::Remote;
 
   xleft = xright = 0;
 
-  xleft_target = (int)(xr * step_By_mm);
-  xright_target = (int)(xl * step_By_mm);
+  xleft_target = (int)(xl * step_By_mm);
+  xright_target = (int)(xr * step_By_mm);
 }
 
-void set_speed(float speedr, float speedl)
+void set_speed(float speedl, float speedr)
 {
   Mmode = MoteurMode::Speed;
   mode = RunMode::Remote;
 
-  v_right = speedr;
   v_left = speedl;
+  v_right = speedr;
 }
 
 bool isMoving()
@@ -228,6 +228,13 @@ void loopGUI(void *param)
       }
     }
 
+    static RunMode old_mode = RunMode::Test;
+    if (mode != old_mode)
+    {
+      old_mode = mode;
+      redraw = true;
+    }
+
     if (redraw && !falte)
       switch (mode)
       {
@@ -235,6 +242,7 @@ void loopGUI(void *param)
         imgButOn.pushSprite((320 - ButtonSize) / 2, 30);
         break;
       case RunMode::Run:
+      case RunMode::Remote:
         imgButOff.pushSprite((320 - ButtonSize) / 2, 30);
         break;
       case RunMode::Test:
@@ -263,8 +271,8 @@ void loopGUI(void *param)
       t0 = t1;
     }
 
-    M5.Lcd.fillCircle(265, 230, 10, RightInput || motorRightOn ? WHITE : DARKGREY);
-    M5.Lcd.fillCircle(55, 230, 10, LeftInput || motorLeftOn ? WHITE : DARKGREY);
+    M5.Lcd.fillCircle(55, 230, 10, RightInput || motorRightOn ? WHITE : DARKGREY);
+    M5.Lcd.fillCircle(265, 230, 10, LeftInput || motorLeftOn ? WHITE : DARKGREY);
 
     M5.Lcd.drawCircle(160, 230, 9, RED);
     M5.Lcd.drawLine(160, 230 - 5, 160, 230 + 5, RED);
@@ -327,8 +335,8 @@ void loop()
   gpio_num_t *p1 = PinMotor1;
   gpio_num_t *p2 = PinMotor2;
 
-  int directionRight = 1;
-  int directionLeft = -1;
+  int directionRight = -1;
+  int directionLeft = 1;
 
   bool target_achieved = false;
 
@@ -349,13 +357,13 @@ void loop()
       {
         c = c1;
         gpio_set_level(p1[c], HIGH);
-        c = (c + directionRight) % 4;
+        c = (c - directionRight) % 4; /// Signe moins : Moteur inversé
         gpio_set_level(p1[c], HIGH);
-        c = (c + directionRight) % 4;
+        c = (c - directionRight) % 4;
         gpio_set_level(p1[c], LOW);
-        c = (c + directionRight) % 4;
+        c = (c - directionRight) % 4;
         gpio_set_level(p1[c], LOW);
-        c1 = (c1 + directionRight) % 4;
+        c1 = (c1 - directionRight) % 4;
         xright = xright + directionRight;
       }
       else
@@ -370,13 +378,13 @@ void loop()
       {
         c = c2;
         gpio_set_level(p2[c], HIGH);
-        c = (c - directionLeft) % 4; /// Signe moins : Moteur inversé
+        c = (c + directionLeft) % 4;
         gpio_set_level(p2[c], HIGH);
-        c = (c - directionLeft) % 4;
+        c = (c + directionLeft) % 4;
         gpio_set_level(p2[c], LOW);
-        c = (c - directionLeft) % 4;
+        c = (c + directionLeft) % 4;
         gpio_set_level(p2[c], LOW);
-        c2 = (c2 - directionLeft) % 4; /// Signe moins : Moteur inversé
+        c2 = (c2 + directionLeft) % 4;
         xleft = xleft + directionLeft;
       }
       else
@@ -406,15 +414,15 @@ void loop()
         {
           c = c1;
           gpio_set_level(p1[c], HIGH);
-          c = (c + directionRight) % 4;
+          c = (c - directionRight) % 4;
           gpio_set_level(p1[c], HIGH);
-          c = (c + directionRight) % 4;
+          c = (c - directionRight) % 4;
           gpio_set_level(p1[c], LOW);
-          c = (c + directionRight) % 4;
+          c = (c - directionRight) % 4;
           gpio_set_level(p1[c], LOW);
-          c1 = (c1 + directionRight) % 4;
+          c1 = (c1 - directionRight) % 4;
           xright = xright + directionRight;
-          t_old_r = t;
+          t_old_r = t_old_r + TEMP / fabs(v_right);
         }
       }
       else
@@ -423,6 +431,7 @@ void loop()
         gpio_set_level(p1[1], LOW);
         gpio_set_level(p1[2], LOW);
         gpio_set_level(p1[3], LOW);
+        t_old_r = t;
       }
 
       if (v_left != 0)
@@ -431,15 +440,15 @@ void loop()
         {
           c = c2;
           gpio_set_level(p2[c], HIGH);
-          c = (c - directionLeft) % 4; /// Signe moins : Moteur inversé
+          c = (c + directionLeft) % 4; /// Signe moins : Moteur inversé
           gpio_set_level(p2[c], HIGH);
-          c = (c - directionLeft) % 4;
+          c = (c + directionLeft) % 4;
           gpio_set_level(p2[c], LOW);
-          c = (c - directionLeft) % 4;
+          c = (c + directionLeft) % 4;
           gpio_set_level(p2[c], LOW);
-          c2 = (c2 - directionLeft) % 4; /// Signe moins : Moteur inversé
+          c2 = (c2 + directionLeft) % 4; /// Signe moins : Moteur inversé
           xleft = xleft + directionLeft;
-          t_old_l = t;
+          t_old_l = t_old_l + TEMP / fabs(v_left);
         }
       }
       else
@@ -448,14 +457,18 @@ void loop()
         gpio_set_level(p2[1], LOW);
         gpio_set_level(p2[2], LOW);
         gpio_set_level(p2[3], LOW);
+        t_old_l = t;
       }
 
       target_achieved = false;
 
-      // delayMicroseconds(TEMP);
+      delayMicroseconds(10);
+    }
+    else
+    {
+      t_old_r = t_old_l = t;
     }
 
-    
     /******************* MODE IDLE   **************************/
     if (mode == RunMode::Idle)
     {
@@ -469,14 +482,12 @@ void loop()
         gpio_set_level(p2[i], LOW);
       }
 
-       delayMicroseconds(TEMP);
+      delayMicroseconds(TEMP);
     }
 
-
-
     // tempo--;
-    //tempo = constrain(tempo, TEMPMIN, TEMP);
+    // tempo = constrain(tempo, TEMPMIN, TEMP);
 
-    //delayMicroseconds(tempo);
+    // delayMicroseconds(tempo);
   }
 }

@@ -253,6 +253,26 @@ void TaskGUI(void *pvParameters)
             }
             draw(selection);
         }
+
+        static int c = 0;
+        static float freq_old = -1;
+        if (c % 10 == 0)
+        {
+            if (freq != freq_old)
+            {
+                Serial2.printf("v=%3.2f\n", freq);
+                freq_old = freq;
+            }
+            else
+            {
+                if (c % 1000 == 0)
+                    Serial2.printf("u=Hz\nv=%3.2f\n", freq);
+            }
+            Serial2.flush();
+        }
+        
+        c++;
+
         delay(1);
     }
 }

@@ -70,6 +70,7 @@ void setup()
   cfg.output_power = false;
   M5.begin(cfg);
   Serial.begin(115200);
+  Serial2.begin(1000000,SERIAL_8N1, -1, 32,false);
   M5.Lcd.setBrightness(255);
 
   pinMode(PinDir, OUTPUT);
@@ -85,6 +86,7 @@ void setup()
 
   dacWrite(SYNC_REF_Pin, 128);
 
+ 
   xTaskCreatePinnedToCore(TaskGUI, "Task1", 20000, NULL, 1, &Task1, 0);
   //xTaskCreatePinnedToCore(TaskOffset, "Task2", 20000, NULL, 1, &Task2, 0);
 }
@@ -162,7 +164,7 @@ void loop()
   if (t - t_dac > 500)
   {
     float y = sin(phase);              // s / MICROSTEP_BY_MM / amp - offset;
-    dacWrite(SYNC_Pin, 128 + 116 * y); // 116 =>1.5V d'amplitude (éviter 127 car saturation)
+    dacWrite(SYNC_Pin, 128 + 116 * y); // 116 =>1.5V d'amplitude (éviter 127 car saturation) //116 =>1.5V d'amplitude (éviter 127 car saturation)
     t_dac = t;
   }
 }
