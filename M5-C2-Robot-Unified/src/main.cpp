@@ -1,6 +1,9 @@
 #include <M5Unified.h>
 #include <button.h>
 #include <limits.h>
+#include "BluetoothSerial.h"
+
+BluetoothSerial SerialBT;
 
 const int ButtonSize = 180;
 #define Whell_Radius 49
@@ -277,6 +280,15 @@ void loopGUI(void *param)
     M5.Lcd.drawCircle(160, 230, 9, RED);
     M5.Lcd.drawLine(160, 230 - 5, 160, 230 + 5, RED);
 
+    while (Serial.available())
+    {
+      SerialBT.write(Serial.read()); // Send data from serial monitor to Bluetooth
+    }
+    while (SerialBT.available())
+    {
+      Serial.write(SerialBT.read()); // Send data from Bluetooth to serial monitor
+    }
+
     delay(10);
   }
 }
@@ -297,18 +309,20 @@ void loopEye(void *param)
       v_left = LeftInput ? 1 : 0;
     }
 
-    delay(10);
+    delay(50);
   }
 }
 
 void setup()
 {
-  Serial.begin(115200);
+  // Serial.begin(115200);
 
   auto cfg = M5.config();
   cfg.output_power = true;
   M5.begin(cfg);
   Serial.begin(115200);
+
+  SerialBT.begin("Robot 1"); // Bluetooth device name
 
   // M5.Axp.SetCHGCurrent(100); #teste for the usb C but not working
 
@@ -325,7 +339,7 @@ void setup()
 
   xTaskCreatePinnedToCore(loopGUI, "Task GUI", 4000, NULL, 0, NULL, 0);
   xTaskCreatePinnedToCore(loopEye, "Task Eye", 4000, NULL, 0, NULL, 0);
-  xTaskCreatePinnedToCore(loopComunication, "Task Com", 4000, NULL, 0, NULL, 0);
+  //xTaskCreatePinnedToCore(loopComunication, "Task Com", 4000, NULL, 0, NULL, 0);
 }
 
 void loop()

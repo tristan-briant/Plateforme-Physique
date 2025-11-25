@@ -20,8 +20,12 @@ def sendstring(x):
     None.
 
     '''
-    
-    import serial
+    try :
+        import serial
+    except:
+        print('pyserial not installed')
+        return
+
     import serial.tools.list_ports
     import time
     
@@ -29,14 +33,17 @@ def sendstring(x):
     address=''
 
     for port, desc, hwid in ports:
-            if('1A86:55D4' in hwid):    # hwid of the M5CORE2
+            if('1A86:55D4' in hwid or '303A:1001' in hwid):    # hwid of the M5CORE2
                 address = port
                 break
     
     if(address != ''):
-        with serial.Serial(address, 115200) as ser:
+        with serial.Serial(address, 115200, rtscts=True) as ser:
+            # ser.setDTR(0)
+            # ser.setRTS(0)
             b = bytes(x, 'utf-8')
             ser.write(b)
+            ser.write(b'\n')
             ser.flush()
             time.sleep(0.01)    # needed on slow computers ?
     
@@ -45,7 +52,9 @@ def sendstring(x):
         
 
 def query(x,timeout=1.0):
+    
     import serial
+    #import serial
     import serial.tools.list_ports
     import time
     
@@ -53,22 +62,24 @@ def query(x,timeout=1.0):
     address=''
 
     for port, desc, hwid in ports:
-            if('1A86:55D4' in hwid):    # hwid of the M5CORE2
+            if('1A86:55D4' in hwid or '303A:1001' in hwid):    # hwid of the M5CORE2
                 address = port
                 break
     
     if(address != ''):
-        with serial.Serial(address, 115200,timeout=timeout) as ser:
-           
+        with serial.Serial(address, 115200,timeout=timeout,rtscts=True) as ser:
+           # ser.setDTR(0)
+           # ser.setRTS(0)
            b = bytes(x, 'utf-8')
            ser.write(b)
+           ser.write(b'\n')
            ser.flush()
-           time.sleep(0.1)    # needed on slow computers ?
+           time.sleep(0.01)    # needed on slow computers ?
            
-           answer = ser.readline(10)
+           answer = ser.readline()
            # print(answer)
            
-           return answer[:-2]
+           return answer[:-2].decode('utf-8')
            
     
     else:
@@ -76,9 +87,9 @@ def query(x,timeout=1.0):
         return None
     
 
-def sensor(side='RIGHT'):
+def sensor(side='both'):
     '''
-    Move the translation robot
+    Return the state of the sensor
 
     Parameters
     ----------
@@ -92,17 +103,17 @@ def sensor(side='RIGHT'):
 
     '''
     
-    answer=query('SENSOR?\n',0.5).decode('utf-8')
-    
-    if side=='BOTH':
+    answer=query('SENSOR?',0.5)
+
+    if side.upper()=='BOTH':
         return answer[0]=='1' , answer[2]=='1' 
-    if side=='RIGHT':
-        return answer[0]=='1'
-    if side=='LEFT':
+    if side.upper()=='RIGHT':
         return answer[2]=='1'
+    if side.upper()=='LEFT':
+        return answer[0]=='1'
     
 
-def move(x_right,x_left=None) : 
+def move(x_left,x_right=None, non_blocking=False) : 
     '''
     Move the robot
 
@@ -110,7 +121,9 @@ def move(x_right,x_left=None) :
     ----------
     x_right,x_left : FLOAT
         Distance to travel in mm for right and left wheel.
-
+    
+    non_blocking : BOOL
+        if True return imediatly otherwize wait the motion to complete
     Returns
     -------
     None.
@@ -119,17 +132,45 @@ def move(x_right,x_left=None) :
     import time
 
 
-    if(x_left==None):
-        sendstring("MOVE {}\n".format(x_right))
+    if(x_right==None):
+        sendstring("MOVE {}".format(x_left))
     else:
-        sendstring("MOVE {},{}\n".format(x_right,x_left))
-        
-    while(True):
-        if(query("MOVING?\n").decode('utf-8')=='0'):
-            break
-        else:
-            time.sleep(0.1)
+        sendstring("MOVE {},{}".format(x_left,x_right))
+      
+    if not non_blocking:
+        while(True):
+            if(query("MOVING?")=='0'):
+                break
+            else:
+                time.sleep(0.01)
             
+def stop():
+    '''
+    Stop the motors
+    '''
+    sendstring("SPEED 0")
+
+
+def speed(speed_left,speed_right=None):
+    '''
+    Set the speed of right and left motor
+
+    Parameters
+    ----------
+    speed_right, speed_left : FLOAT
+        speed in % for right and left wheel.
+
+    Returns
+    -------
+    None.
+
+    '''
+    
+    if(speed_left==None):
+        sendstring("SPEED {}".format(speed_left))
+    else:
+        sendstring("MOVE {},{}".format(speed_left,speed_right))
+        
     
    
         
@@ -148,6 +189,6 @@ def turn(angle):
 
     '''
     
-    sendstring("TURN {}\n".format(angl))
+    sendstring("TURN {}".format(angl))
     
    

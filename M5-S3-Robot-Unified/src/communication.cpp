@@ -1,10 +1,10 @@
 #include "Vrekrer_scpi_parser.h"
 
-#define __TS_VERSION__ "V0.1"
+#define __TS_VERSION__ "V1.0"
 
 extern bool LeftInput, RightInput;
-void set_target_mm(float xr, float xl);
-void set_speed(float speedr, float speedl);
+void set_target_mm(float xl, float xr);
+void set_speed(float speedl, float speedr);
 
 bool isMoving();
 bool getRightSensor();
@@ -14,8 +14,6 @@ SCPI_Parser my_instrument;
 
 void Identify(SCPI_C commands, SCPI_P parameters, Stream &interface)
 {
-    Serial.print("Robot, ");
-    Serial.println(__TS_VERSION__);
     interface.print(F("Robot, "));
     interface.println(F(__TS_VERSION__));
 }
@@ -31,11 +29,11 @@ void move(SCPI_C commands, SCPI_P parameters, Stream &interface)
     }
     if (parameters.Size() == 2)
     {
-        newValueRight = String(parameters[0]).toFloat();
-        newValueLeft = String(parameters[1]).toFloat();
+        newValueLeft = String(parameters[0]).toFloat();
+        newValueRight = String(parameters[1]).toFloat();
     }
 
-    set_target_mm(newValueRight, newValueLeft);
+    set_target_mm(newValueLeft, newValueRight);
 }
 
 void speed(SCPI_C commands, SCPI_P parameters, Stream &interface)
@@ -46,17 +44,15 @@ void speed(SCPI_C commands, SCPI_P parameters, Stream &interface)
         return;
     if (parameters.Size() == 1)
     {
-        newValueLeft = newValueRight = String(parameters[0]).toFloat()/100.0f;
+        newValueLeft = newValueRight = String(parameters[0]).toFloat() / 100.0f;
     }
     if (parameters.Size() == 2)
     {
-        newValueRight = String(parameters[0]).toFloat() / 100.0f;
-        newValueLeft = String(parameters[1]).toFloat() / 100.0f;
+        newValueLeft = String(parameters[0]).toFloat() / 100.0f;
+        newValueRight = String(parameters[1]).toFloat() / 100.0f;
     }
 
-    interface.println(newValueRight);
-     interface.println(newValueLeft);
-    set_speed(newValueRight, newValueLeft);
+    set_speed(newValueLeft, newValueRight);
 }
 
 void MovingStatut(SCPI_C commands, SCPI_P parameters, Stream &interface)
@@ -69,14 +65,17 @@ void MovingStatut(SCPI_C commands, SCPI_P parameters, Stream &interface)
 
 void sensor(SCPI_C commands, SCPI_P parameters, Stream &interface)
 {
-    if (getRightSensor())
-        interface.print("1,");
-    else
-        interface.print("0,");
+
     if (getLeftSensor())
-        interface.println("1");
+        interface.print("1");
     else
-        interface.println("0");
+        interface.print("0");
+    interface.print(",");
+    if (getRightSensor())
+        interface.print("1");
+    else
+        interface.print("0");
+    interface.println();
 }
 
 void initialize_SCPI()
@@ -95,12 +94,6 @@ void loopComunication(void *param)
     while (true)
     {
         my_instrument.ProcessInput(Serial, "\n");
-
-        /*if (send_message_flag)
-        {
-            Serial.println("DONE");
-            send_message_flag = false;
-        }*/
         delay(10);
     }
 }

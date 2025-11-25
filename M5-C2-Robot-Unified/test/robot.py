@@ -33,12 +33,14 @@ def sendstring(x):
     address=''
 
     for port, desc, hwid in ports:
-            if('1A86:55D4' in hwid):    # hwid of the M5CORE2
+            if('1A86:55D4' in hwid or '303A:1001' in hwid):    # hwid of the M5CORE2
                 address = port
                 break
     
     if(address != ''):
-        with serial.Serial(address, 115200) as ser:
+        with serial.Serial(address, 115200, rtscts=True) as ser:
+            # ser.setDTR(0)
+            # ser.setRTS(0)
             b = bytes(x, 'utf-8')
             ser.write(b)
             ser.write(b'\n')
@@ -60,13 +62,14 @@ def query(x,timeout=1.0):
     address=''
 
     for port, desc, hwid in ports:
-            if('1A86:55D4' in hwid):    # hwid of the M5CORE2
+            if('1A86:55D4' in hwid or '303A:1001' in hwid):    # hwid of the M5CORE2
                 address = port
                 break
     
     if(address != ''):
-        with serial.Serial(address, 115200,timeout=timeout) as ser:
-           
+        with serial.Serial(address, 115200,timeout=timeout,rtscts=True) as ser:
+           # ser.setDTR(0)
+           # ser.setRTS(0)
            b = bytes(x, 'utf-8')
            ser.write(b)
            ser.write(b'\n')

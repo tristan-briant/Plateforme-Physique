@@ -102,6 +102,16 @@ void loopComunication(void *param)
             Serial.println("DONE");
             send_message_flag = false;
         }*/
+        /*if (getLeftSensor())
+            Serial.print("1");
+        else
+            Serial.print("0");
+        Serial.print(",");
+        if (getRightSensor())
+            Serial.print("1");
+        else
+            Serial.print("0");
+        Serial.println();*/
         delay(10);
     }
 }
