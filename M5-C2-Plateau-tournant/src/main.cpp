@@ -1,6 +1,6 @@
 #include <M5Unified.h>
 #include <button.h> // Home made mini lib to emulate button from M5core2 not present in M5Unified
-#include <phyphoxBle.h>
+//#include <phyphoxBle.h>
 
 const gpio_num_t PinDir = GPIO_NUM_19;
 const gpio_num_t PinStep = GPIO_NUM_33;
@@ -8,7 +8,7 @@ const gpio_num_t PinEnable = GPIO_NUM_14;
 const gpio_num_t SYNC_Pin = GPIO_NUM_26;
 const gpio_num_t SYNC_REF_Pin = GPIO_NUM_25;
 
-const float SPEED_LEDC = 15;    //speed to change to ledc mode
+const float SPEED_LEDC = 15; // speed to change to ledc mode
 bool modeLEDC = false;
 
 double angle = 0, speed = 0, acc = 0.1;
@@ -64,6 +64,7 @@ void setup()
   cfg.output_power = false;
   M5.begin(cfg);
   Serial.begin(115200);
+  Serial2.begin(1000000, SERIAL_8N1, -1, 32, false);
 
   // ledcSetup(0, SPEED2TIME, 8);
 

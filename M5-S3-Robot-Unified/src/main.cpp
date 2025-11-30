@@ -280,7 +280,7 @@ void loopGUI(void *param)
     M5.Lcd.drawCircle(160, 230, 9, RED);
     M5.Lcd.drawLine(160, 230 - 5, 160, 230 + 5, RED);
 
-    delay(10);
+    delay(20);
   }
 }
 
@@ -323,7 +323,7 @@ void setup()
 
   xTaskCreatePinnedToCore(loopGUI, "Task GUI", 4000, NULL, 0, NULL, 0);
   xTaskCreatePinnedToCore(loopEye, "Task Eye", 4000, NULL, 0, NULL, 0);
-  xTaskCreatePinnedToCore(loopComunication, "Task Com", 4000, NULL, 0, NULL, 0);
+  xTaskCreatePinnedToCore(loopComunication, "Task Com", 4000, NULL, 1, NULL, 0);
 }
 
 void loop()

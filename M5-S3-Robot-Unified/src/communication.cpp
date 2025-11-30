@@ -65,6 +65,25 @@ void MovingStatut(SCPI_C commands, SCPI_P parameters, Stream &interface)
 
 void sensor(SCPI_C commands, SCPI_P parameters, Stream &interface)
 {
+    char str[5];
+
+    if (getLeftSensor())
+        str[0] = '1';
+    else
+        str[0] = '0';
+
+    str[1] = ',';
+
+    if (getRightSensor())
+        str[2] = '1';
+    else
+        str[2] = '0';
+
+    /*interface.print(",");
+    if (getRightSensor())
+        interface.print("1");
+    else
+        interface.print("0");
 
     if (getLeftSensor())
         interface.print("1");
@@ -74,8 +93,8 @@ void sensor(SCPI_C commands, SCPI_P parameters, Stream &interface)
     if (getRightSensor())
         interface.print("1");
     else
-        interface.print("0");
-    interface.println();
+        interface.print("0");*/
+    interface.println(str);
 }
 
 void initialize_SCPI()
@@ -85,7 +104,7 @@ void initialize_SCPI()
     my_instrument.RegisterCommand(F("MOVE"), &move);
     my_instrument.RegisterCommand(F("SPEED"), &speed);
     my_instrument.RegisterCommand(F("MOVING?"), &MovingStatut);
-    my_instrument.RegisterCommand(F("SENSOR?"), &sensor);
+    my_instrument.RegisterCommand(F("SEnsor?"), &sensor);
 }
 
 void loopComunication(void *param)
@@ -94,6 +113,7 @@ void loopComunication(void *param)
     while (true)
     {
         my_instrument.ProcessInput(Serial, "\n");
-        delay(10);
+        //Serial.flush();
+        delay(1);
     }
 }

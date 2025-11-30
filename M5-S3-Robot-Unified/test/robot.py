@@ -24,7 +24,7 @@ def sendstring(x):
         import serial
     except:
         print('pyserial not installed')
-        return
+        return False
 
     import serial.tools.list_ports
     import time
@@ -46,9 +46,11 @@ def sendstring(x):
             ser.write(b'\n')
             ser.flush()
             time.sleep(0.01)    # needed on slow computers ?
-    
     else:
-        print('Robot non connecté')    
+        print('Robot non connecté')
+        return False
+        
+    return True
         
 
 def query(x,timeout=1.0):
@@ -133,13 +135,18 @@ def move(x_left,x_right=None, non_blocking=False) :
 
 
     if(x_right==None):
-        sendstring("MOVE {}".format(x_left))
+        if sendstring("MOVE {}".format(x_left)) == False:
+            return
     else:
-        sendstring("MOVE {},{}".format(x_left,x_right))
+        if sendstring("MOVE {},{}".format(x_left,x_right)) == False:
+            return
       
     if not non_blocking:
         while(True):
-            if(query("MOVING?")=='0'):
+            answer = query("MOVING?")
+            if(answer == None):
+                return
+            if(answer =='0'):
                 break
             else:
                 time.sleep(0.01)

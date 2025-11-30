@@ -213,15 +213,35 @@ void TaskGUI(void *pvParameters)
             }
             draw(selection);
         }
+
+        static int c = 0;
+        static float speed_old = -1;
+        if (c % 50 == 0)
+        {
+            if (speed != speed_old)
+            {
+                Serial2.printf("v=%3.2f\n", speed);
+                speed_old = speed;
+            }
+            else
+            {
+                if (c % 1000 == 0)
+                    Serial2.printf("u=tr/s\nv=%3.2f\n", speed);
+            }
+            Serial2.flush();
+        }
+
+        c++;
+
         delay(1);
 
-        static int count = 0;
+        /*static int count = 0;
         count++;
         if (count % 100 == 0)
         {
             Serial.print(step);
             Serial.print("  ");
             Serial.println(period);
-        }
+        }*/
     }
 }
