@@ -12,6 +12,11 @@
   or duty cycle of an input signal. This gives a total of up to 16 controllable PWM outputs. All 30 GPIO pins can be driven
   by the PWM block
 *****************************************************************************************************************************/
+
+// Probleme de compil avec  pwm_init(_slice_num, &config, true);
+// Remplacer par            pwm_init(_slice_num,0, &config, true);
+// dans .pio/lbdeps/src/RP2040_PWM.h
+
 #include <Arduino.h>
 // #define _PWM_LOGLEVEL_ 0 // message du PWM
 #include "RP2040_PWM.h"
@@ -274,7 +279,7 @@ void loopTask(uint /*gpio*/, uint32_t /*event_mask*/)
   float Ival = 0,
         Qval = 0;
 
-  static float I_old, Q_old;
+  static float Q_old;
 
   int N = CAPTURE_DEPTH;
 
@@ -312,7 +317,7 @@ void loopTask(uint /*gpio*/, uint32_t /*event_mask*/)
     turn++;
 
   Q_old = Q;
-  I_old = I;
+  // I_old = I;
 
   turnTotal = turn + turn_frac;
   turnTotal_avg = epsilon * turnTotal + (1 - epsilon) * turnTotal_avg;
@@ -322,7 +327,6 @@ void loopTask(uint /*gpio*/, uint32_t /*event_mask*/)
     turnTotal0 = turnTotal_avg;
     countDown--;
   }
-
 
   uint8_t GainSelection = digitalRead(pinGain1) + 2 * digitalRead(pinGain2);
   // GainSelection = 0;
@@ -348,8 +352,8 @@ void loopTask(uint /*gpio*/, uint32_t /*event_mask*/)
     output_mode = DC_MODE;
   }
 
-  const float dt = 1.0 / Freq ; //(AC 1Hz)
-  if (output_mode==AC_MODE)
+  const float dt = 1.0 / Freq; //(AC 1Hz)
+  if (output_mode == AC_MODE)
   {
     turnTotal0 = dt * (turnTotal_avg) + (1 - dt) * (turnTotal0);
   }

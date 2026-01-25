@@ -83,6 +83,19 @@ public:
         return false;
     }
 
+    bool wasClicked()
+    {
+        for (std::size_t i = 0; i < M5.Touch.getCount(); ++i)
+        {
+            auto t = M5.Touch.getDetail(i);
+
+            if (contain(t.base_x, t.base_y) && t.wasClicked())
+                return true;
+        }
+
+        return false;
+    }
+
     bool pressedFor(uint32_t ms)
     {
         for (std::size_t i = 0; i < M5.Touch.getCount(); ++i)

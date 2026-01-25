@@ -1,6 +1,6 @@
 #include <M5Unified.h>
 #include <button.h> // Home made mini lib to emulate button from M5core2 not present in M5Unified
-//#include <phyphoxBle.h>
+// #include <phyphoxBle.h>
 
 const gpio_num_t PinDir = GPIO_NUM_19;
 const gpio_num_t PinStep = GPIO_NUM_33;
@@ -11,12 +11,14 @@ const gpio_num_t SYNC_REF_Pin = GPIO_NUM_25;
 const float SPEED_LEDC = 15; // speed to change to ledc mode
 bool modeLEDC = false;
 
-double angle = 0, speed = 0, acc = 0.1;
+double angle = 0;
+double speed = 0;                             // Actual speed (turn per second)
+double acc = 0.1;                             // Turn per second^2
 double targetSpeed = 0.1, Acceleration = 0.2; // turn per second
-double period = 0;
+// double period = 0;
 
 const float MAXSPEED = 10;
-const double SPEED2TIME = 200 * 32;
+const double SPEED2TIME = 200 * 32; // Conversion ratio: microstep by turn
 long synchro = 0;
 
 void TaskGUI(void *param);
@@ -97,23 +99,22 @@ void setup()
   // xTaskCreatePinnedToCore(taskSetupCore1, "Task2", 2000, NULL, 1, NULL, 1);
 }
 
-long delta;
-
 void loop()
 {
   static int s = 0;
   float x = 0;
 
-  long t = micros();
-  static long t_old = t;
-  static long t_dac = t;
-  static double t_edge = t;
+  unsigned long t = micros();
+  static unsigned long t_old = t;
+  static unsigned long t_dac = t;
+  static unsigned long t_edge = t;
 
-  delta = t - t_old;
+  unsigned long delta = t - t_old;
+  unsigned long period; // Period of pulses in micros
 
   // static float phase = 0;
 
-  if (delta > 10000)
+  if (delta > 10000UL) // Comparaison en UL pour être valide même avec les overflows de micros()
   {
 
     if (mode_run == MOTOR_BREAK && fabs(speed) <= 0.0001)
@@ -188,7 +189,7 @@ void loop()
       t_edge = t;
     }
 
-    if (t - t_edge > 10000)
+    if (t - t_edge > 10000UL)
     {
       ledcChangeFrequency(0, freq, 8);
       ledcWrite(0, 1);
@@ -206,9 +207,14 @@ void loop()
       t_edge = t;
     }
 
+    static double period_double = 0;
+    static double cumul = 0; // cumulated error
+
     if (fabs(speed) > 0)
     {
-      period = 1e6 / fabs(speed) / SPEED2TIME;
+      period_double = 1e6 / fabs(speed) / SPEED2TIME;
+      period = (unsigned long)period_double;
+
       while (t - t_edge > period)
       {
         gpio_set_level(PinStep, 1);
@@ -216,6 +222,14 @@ void loop()
         gpio_set_level(PinStep, 0);
         delayMicroseconds(1);
         t_edge += period;
+
+        cumul += period_double - period;
+        unsigned long lc = (unsigned long)cumul;
+        if (lc > 0)
+        {
+          t_edge += lc;
+          cumul -= lc;
+        }
       }
     }
     else
@@ -226,7 +240,7 @@ void loop()
     // ledcWrite(0, 0);
   }
 
-  if (t - t_dac > 100)
+  if (t - t_dac > 100UL)
   {
     float y = 2 * PI * ((step / 32) % 200) / 200.0;
     dacWrite(SYNC_Pin, 128 + 127 * sin(y));

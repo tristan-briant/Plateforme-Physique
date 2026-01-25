@@ -44,6 +44,7 @@ void draw(int part = -1)
 {
     int ypos[] = {50, 100, 150, 200};
     int xpos;
+    char str[20];
 
     static long told = millis();
     long t = millis();
@@ -96,20 +97,42 @@ void draw(int part = -1)
         img.drawString(mode_run == MOTOR_ON ? "Start" : "Stop", x, 25);
         img.setTextDatum(CC_DATUM);
     }
-    if (part < 0)
+    /*if (part < 0 || part == 4) /// Draw the speed value frame
+    {
+        img.fillSprite(BLACK);
+        img.setTextColor(colorText);
+        img.setFont(&FreeSansBold12pt7b);
+        img.setTextDatum(CC_DATUM);
+
+        int x = 320 * 3 / 12;
+        img.fillRoundRect(x - 50, 2, 100, 46, 15, color565(60));
+        img.drawRoundRect(x - 50, 2, 100, 46, 15, mainColor);
+        img.drawString(mode_run == MOTOR_ON ? "Start" : "Stop", x, 25);
+        img.setTextDatum(CC_DATUM);
+    }*/
+    if (part < 0 || part == 4)
     {
         img.fillSprite(BLACK);
         img.setTextColor(colorText);
         // img.setFont(&FreeSans12pt7b);
         img.setTextDatum(BC_DATUM);
+
         img.setFont(&FreeSansBold18pt7b);
         img.fillRoundRect(320 / 6 - 50, 2, 100, 100, 15, color565(30));
         img.drawRoundRect(320 / 6 - 50, 2, 100, 100, 15, color565(100, 0, 0));
         img.drawString("-", 320 / 6, 38);
 
+        // img.drawString("+", 320 /2, 38);
+
         img.fillRoundRect(320 * 5 / 6 - 50, 2, 100, 100, 15, color565(30));
         img.drawRoundRect(320 * 5 / 6 - 50, 2, 100, 100, 15, color565(100, 0, 0));
         img.drawString("+", 320 * 5 / 6, 38);
+
+        img.setFont(&FreeSans12pt7b);
+        sprintf(str, "%.2f t/s", speed);
+
+        // img.drawFloat(speed, 2, 320 / 2, 25);
+        img.drawString(str, 320 / 2, 25, &FreeSans12pt7b);
 
         img.pushSprite(0, 200);
     }
@@ -132,7 +155,7 @@ void TaskGUI(void *pvParameters)
     Button buttonMinus(0, 200, 107, 50);
     Button buttonPlus(214, 200, 106, 50);
 
-    img.createSprite(320, 50); // Create a 320x240 canvas
+    img.createSprite(320, 50); // Create a 320x50 canvas
 
     draw();
     buttonFree.draw();
@@ -231,17 +254,13 @@ void TaskGUI(void *pvParameters)
             Serial2.flush();
         }
 
+        if (c % 25 == 0)
+        {
+            draw(4); // refresh speed value
+        }
+
         c++;
 
         delay(1);
-
-        /*static int count = 0;
-        count++;
-        if (count % 100 == 0)
-        {
-            Serial.print(step);
-            Serial.print("  ");
-            Serial.println(period);
-        }*/
     }
 }

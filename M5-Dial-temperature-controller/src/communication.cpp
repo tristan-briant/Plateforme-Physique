@@ -2,7 +2,7 @@
 // #include <M5Stack.h>
 #include "Vrekrer_scpi_parser.h"
 
-#define __TC_VERSION__ "V0.2"
+#define __TC_VERSION__ "V0.3"
 
 void save_value(const char *name, const char *key, double data);
 void save_tuning(PID pid1);  //, PID pid2);
