@@ -67,7 +67,7 @@ def query(x,timeout=1.0):
                 break
     
     if(address != ''):
-        with serial.Serial(address, 115200,timeout=timeout,rtscts=True) as ser:
+        with serial.Serial(address, 115200,timeout=timeout,rtscts=False) as ser:
            # ser.setDTR(0)
            # ser.setRTS(0)
            b = bytes(x, 'utf-8')

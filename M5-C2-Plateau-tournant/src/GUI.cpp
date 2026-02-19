@@ -23,8 +23,10 @@ int colorText = WHITE;
 int colorBackGround = BLACK;
 
 // extern float freq, amp, offset, power;
-extern double speed, targetSpeed, Acceleration; // turn per second
+extern double turn, speed, targetSpeed, Acceleration;
 extern double period;
+
+bool display_turn = true;
 
 // extern float offsetTarget, offsetCal;
 
@@ -97,20 +99,7 @@ void draw(int part = -1)
         img.drawString(mode_run == MOTOR_ON ? "Start" : "Stop", x, 25);
         img.setTextDatum(CC_DATUM);
     }
-    /*if (part < 0 || part == 4) /// Draw the speed value frame
-    {
-        img.fillSprite(BLACK);
-        img.setTextColor(colorText);
-        img.setFont(&FreeSansBold12pt7b);
-        img.setTextDatum(CC_DATUM);
-
-        int x = 320 * 3 / 12;
-        img.fillRoundRect(x - 50, 2, 100, 46, 15, color565(60));
-        img.drawRoundRect(x - 50, 2, 100, 46, 15, mainColor);
-        img.drawString(mode_run == MOTOR_ON ? "Start" : "Stop", x, 25);
-        img.setTextDatum(CC_DATUM);
-    }*/
-    if (part < 0 || part == 4)
+    if (part < 0 || part == 4) /// Draw the speed/turn value frame
     {
         img.fillSprite(BLACK);
         img.setTextColor(colorText);
@@ -129,7 +118,11 @@ void draw(int part = -1)
         img.drawString("+", 320 * 5 / 6, 38);
 
         img.setFont(&FreeSans12pt7b);
-        sprintf(str, "%.2f t/s", speed);
+
+        if (display_turn)
+            sprintf(str, "%.1f tr", turn);
+        else
+            sprintf(str, "%.2f t/s", speed);
 
         // img.drawFloat(speed, 2, 320 / 2, 25);
         img.drawString(str, 320 / 2, 25, &FreeSans12pt7b);
@@ -180,6 +173,12 @@ void TaskGUI(void *pvParameters)
             inc = +10;
         if (M5.BtnC.pressedFor(3000) || buttonPlus.pressedFor(3000))
             inc = +100;
+
+        if (M5.BtnB.wasClicked())
+            display_turn = !display_turn;
+
+        if (M5.BtnB.pressedFor(1000))
+            step = 0;
 
         if (buttonFreqSelec.isFlicking())
             inc = Button::deltaFlickedH();

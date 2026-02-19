@@ -2,6 +2,7 @@
 #include <Button.h>
 
 extern float FREQ_MAX, AMPL_MAX;
+bool needToRedraw = true;
 
 enum ModeRun
 {
@@ -20,7 +21,8 @@ int colorText = WHITE;
 int colorBackGround = BLACK;
 
 extern float freq, amp, offset, power;
-extern float offsetTarget, offsetCal;
+extern float offsetTarget;
+float offsetCal = 0;
 
 M5Canvas img(&M5.Lcd);
 
@@ -42,6 +44,7 @@ void draw(int part = -1)
     static long told = millis();
     long t = millis();
 
+    img.fillSprite(BLACK);
     if (part < 0 || part == 0) /// Draw the freq frame
     {
 
@@ -140,13 +143,13 @@ void draw(int part = -1)
         img.pushSprite(0, 200);
     }
 
-    Serial.printf("%6d  %6d\n", t - millis(), t - told);
+    // Serial.printf("%6d  %6d\n", t - millis(), t - told);
     told = millis();
 
     return;
 }
 
-void TaskGUI(void *pvParameters)
+void loopGUI(void *pvParameters)
 {
     Button buttonFreqSelec(0, 0, 320, 50);
     Button buttonAmpSelec(0, 50, 320, 50);
@@ -172,6 +175,13 @@ void TaskGUI(void *pvParameters)
         float inc = 0;
 
         M5.update();
+
+        if (needToRedraw)
+        {
+            draw();
+            Serial.println("Redraw!");
+            needToRedraw = false;
+        }
 
         if (buttonOffsetSelec.pressedFor(2000))
         {
@@ -270,7 +280,7 @@ void TaskGUI(void *pvParameters)
             }
             Serial2.flush();
         }
-        
+
         c++;
 
         delay(1);

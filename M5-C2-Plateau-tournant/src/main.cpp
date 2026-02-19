@@ -11,13 +11,13 @@ const gpio_num_t SYNC_REF_Pin = GPIO_NUM_25;
 const float SPEED_LEDC = 15; // speed to change to ledc mode
 bool modeLEDC = false;
 
-double angle = 0;
+// double angle = 0;
+double turn = 0;                              // number of turn
 double speed = 0;                             // Actual speed (turn per second)
 double acc = 0.1;                             // Turn per second^2
 double targetSpeed = 0.1, Acceleration = 0.2; // turn per second
 // double period = 0;
 
-const float MAXSPEED = 10;
 const double SPEED2TIME = 200 * 32; // Conversion ratio: microstep by turn
 long synchro = 0;
 
@@ -43,11 +43,11 @@ TaskHandle_t Task1, Task2, Task3;
 float offsetTarget = 0, offsetCal = 0;
 
 bool isOn = true;
-float SPEED_MAX = 100, ACC_MAX = 30;
+float SPEED_MAX = 10, ACC_MAX = 30;
 
-int MicroStep = 64;
-const float Radius = 10;
+const int MicroStep = 64;
 const int STEP_BY_TURN = 100;
+const float Radius = 10;
 const float MICROSTEP_BY_MM = MicroStep * STEP_BY_TURN / (2 * PI * Radius);
 
 long step;
@@ -55,9 +55,9 @@ long step;
 void IRAM_ATTR countTask()
 {
   if (gpio_get_level(PinDir))
-    step++;
-  else
     step--;
+  else
+    step++;
 }
 
 void setup()
@@ -127,8 +127,8 @@ void loop()
       gpio_set_level(PinEnable, HIGH);
       t_old = t;
       speed = 0;
-      step = 0;
-      // return;
+      // step = 0;
+      //  return;
     }
     else
       gpio_set_level(PinEnable, LOW);
@@ -184,7 +184,7 @@ void loop()
       ledcChangeFrequency(0, freq, 8);
       ledcWrite(0, 1);
       ledcAttachPin(PinStep, 0);
-      attachInterrupt(33, countTask, RISING);
+      //attachInterrupt(33, countTask, RISING);
       modeLEDC = true;
       t_edge = t;
     }
@@ -202,7 +202,7 @@ void loop()
     {
       ledcDetachPin(PinStep);
       gpio_set_direction(PinStep, GPIO_MODE_OUTPUT);
-      attachInterrupt(33, countTask, RISING);
+      //attachInterrupt(33, countTask, RISING);
       modeLEDC = false;
       t_edge = t;
     }
@@ -239,6 +239,8 @@ void loop()
 
     // ledcWrite(0, 0);
   }
+
+  turn = (double)step / STEP_BY_TURN / MicroStep;
 
   if (t - t_dac > 100UL)
   {

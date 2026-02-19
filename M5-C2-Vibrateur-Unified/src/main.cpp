@@ -13,7 +13,8 @@ const float MAXSPEED = 10;
 const float SPEED2TIME = 200 * 32;
 long synchro = 0;
 
-void TaskGUI(void *param);
+void loopGUI(void *param);
+void loopComunication(void *param);
 
 enum ModeRun
 {
@@ -26,14 +27,12 @@ ModeRun mode_run;
 
 int mode = 0;
 
-extern int delaylength;
-
 TaskHandle_t Task1, Task2, Task3;
 
-float freq = 1, amp = 1, offset = 0, power = 1;
-float offsetTarget = 0, offsetCal = 0;
+float freq = 1, amp = 1, offset = 0;
+float offsetTarget = 0;
 
-bool isOn = true;
+// bool isOn = true;
 float FREQ_MAX = 100, AMPL_MAX = 2000;
 
 int MicroStep = 32;
@@ -70,7 +69,7 @@ void setup()
   cfg.output_power = false;
   M5.begin(cfg);
   Serial.begin(115200);
-  Serial2.begin(1000000,SERIAL_8N1, -1, 32,false);
+  Serial2.begin(1000000, SERIAL_8N1, -1, 32, false);
   M5.Lcd.setBrightness(255);
 
   pinMode(PinDir, OUTPUT);
@@ -86,9 +85,8 @@ void setup()
 
   dacWrite(SYNC_REF_Pin, 128);
 
- 
-  xTaskCreatePinnedToCore(TaskGUI, "Task1", 20000, NULL, 1, &Task1, 0);
-  //xTaskCreatePinnedToCore(TaskOffset, "Task2", 20000, NULL, 1, &Task2, 0);
+  xTaskCreatePinnedToCore(loopGUI, NULL, 20000, NULL, 1, NULL, 0);
+  xTaskCreatePinnedToCore(loopComunication, NULL, 20000, NULL, 1, NULL, 0);
 }
 
 void loop()
