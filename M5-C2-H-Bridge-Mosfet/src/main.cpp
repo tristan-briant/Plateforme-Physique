@@ -2,10 +2,21 @@
 #include "PID_v1.h"
 // #include "button.h"
 
+// Board version
+// #define BOARD_V1   //fisrt version with cms transisto
+#define BOARD_V2 // newer version with TTL 7402N chip
+
+#ifdef BOARD_V1
 gpio_num_t PinAH = GPIO_NUM_13,
            PinAL = GPIO_NUM_14,
            PinBH = GPIO_NUM_27,
            PinBL = GPIO_NUM_19;
+#endif
+
+#ifdef BOARD_V2
+gpio_num_t PinPWM = GPIO_NUM_19,
+           PinDIR = GPIO_NUM_27;
+#endif
 
 int freqPWM = 10000;
 
@@ -13,10 +24,12 @@ bool outputEnable = false;
 
 float I, Q;
 
+const float LambdaOver2 = 340.0 / 40 * 0.5; // lambda over 2 in mm ( 0.5 * c / freq *1000)  with f= 40kHz
+
 long t_loop_us;
 
 float turn = 0;
-float turn_frac, turnTotal, turn_frac0 = 0;
+float turn_frac, turnTotal, turn_frac0;
 float turnTotal_avg = 0;
 const float epsilon = 0.02;
 
@@ -27,9 +40,7 @@ void save_value(const char *name, const char *key, double data);
 void save_tuning(PID pid1);  //, PID pid2);
 void load_tuning(PID *pid1); //, PID *pid2);
 void loopServo(void *param);
-void loopSignal(void *param);
-
-// QueueHandle_t xQueue;
+// void loopSignal(void *param);
 
 double xact, xset = 20;
 double output, outputGUI, res;
@@ -44,6 +55,7 @@ void setup()
   Serial.begin(115200);
   Serial2.begin(2000000, SERIAL_8N1, 33, 32);
 
+#ifdef BOARD_V1
   pinMode(PinAH, OUTPUT);
   pinMode(PinAL, OUTPUT);
   pinMode(PinBH, OUTPUT);
@@ -62,8 +74,17 @@ void setup()
 
   ledcWrite(0, 0);
   gpio_set_level(PinAL, 1);
-  ledcWrite(1, 500);
+  ledcWrite(1, 0);
   gpio_set_level(PinBL, 1);
+#endif
+#ifdef BOARD_V2
+  pinMode(PinDIR, OUTPUT);
+  pinMode(PinPWM, OUTPUT);
+
+  ledcSetup(0, freqPWM, 10);
+  ledcAttachPin(PinPWM, 0);
+  ledcWrite(0, 1023);
+#endif
 
   xTaskCreatePinnedToCore(loopGUI, NULL, 10000, NULL, 0, NULL, 0);
   xTaskCreatePinnedToCore(loopServo, "", 10000, NULL, 0, NULL, 0);
@@ -82,6 +103,7 @@ void setup()
   Serial.println(pid1.GetMode());
 
   pid1.SetMode(MANUAL);
+  pid1.SetSampleTime(10);
 }
 
 void loop()
@@ -124,10 +146,13 @@ void loop()
 
       turnTotal_avg = epsilon * turnTotal + (1 - epsilon) * turnTotal_avg;
 
+      xact = -(turnTotal_avg - turn_frac0) * LambdaOver2;
+
       data_requested = false;
       Q_old = Q;
       I_old = I;
 
+      output = 0;
       // outputGUI = output;
       delayMicroseconds(10);
     }
@@ -140,56 +165,60 @@ void loopServo(void *param)
   while (true)
   {
 
-    if (pid1.Compute())
+#ifdef BOARD_V1
+    if (outputEnable)
     {
+      pid1.Compute();
       res = pid1.getOutput();
-      res = 25;
 
-      if (outputEnable)
+      if (res >= 0)
       {
-        if (res >= 0)
-        {
-          gpio_set_level(PinAL, 1);
-          ledcWrite(1, 0);
-          delayMicroseconds(100);
-          gpio_set_level(PinBL, 0);
-          ledcWrite(0, fabs(res / 100.0) * 1023);
-        }
-        else
-        {
-          gpio_set_level(PinBL, 1);
-          ledcWrite(0, 0);
-          delayMicroseconds(100);
-          gpio_set_level(PinAL, 0);
-          ledcWrite(1, fabs(res / 100.0) * 1023);
-        }
+        gpio_set_level(PinAL, 1);
+        ledcWrite(1, 0);
+        delayMicroseconds(100);
+        gpio_set_level(PinBL, 0);
+        ledcWrite(0, fabs(res / 100.0) * 1023);
       }
       else
       {
+        gpio_set_level(PinBL, 1);
+        ledcWrite(0, 0);
+        delayMicroseconds(100);
+        gpio_set_level(PinAL, 0);
+        ledcWrite(1, fabs(res / 100.0) * 1023);
+      }
+
+      else
+      {
+        res = 0;
         ledcWrite(0, 0);
         gpio_set_level(PinAL, 1);
         ledcWrite(1, 0);
         gpio_set_level(PinBL, 1);
       }
     }
-    /*
+#endif
 
+#ifdef BOARD_V2
     if (outputEnable)
     {
-      gpio_set_level(PinAL, 1);
-      ledcWrite(1, 0);
-      delayMicroseconds(100);
-      gpio_set_level(PinBL, 0);
-      ledcWrite(0, 512);
+      pid1.Compute();
+      res = pid1.getOutput();
+
+      if (res >= 0)
+        gpio_set_level(PinDIR, 0);
+      else
+        gpio_set_level(PinDIR, 1);
+
+      ledcWrite(0, 1023 - fabs(res / 100.0) * 1023);
     }
     else
     {
-      ledcWrite(0, 0);
-      gpio_set_level(PinAL, 1);
-      ledcWrite(1, 0);
-      gpio_set_level(PinBL, 1);
+      res = 0;
+      ledcWrite(0, 1023);
     }
-*/
+#endif
+
     outputGUI = res;
     delay(20);
   }

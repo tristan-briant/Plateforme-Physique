@@ -2,30 +2,29 @@
 // #include <M5Stack.h>
 #include "Vrekrer_scpi_parser.h"
 
-#define __TC_VERSION__ "V0.1"
+#define __TC_VERSION__ "V1.0"
 
 void save_value(const char *name, const char *key, double data);
 void save_tuning(PID pid1);  //, PID pid2);
 void load_tuning(PID *pid1); //, PID *pid2);
 
-extern PID pid1;//, pid2;
+extern PID pid1; //, pid2;
 extern double xact, xset;
+extern bool paramValueChanged;
 
 SCPI_Parser my_instrument;
 
 void Identify(SCPI_C commands, SCPI_P parameters, Stream &interface)
 {
-    //Serial.println("titi");
-    interface.print(F("Temperature Controller, "));
+    interface.print(F("H-Bridge, "));
     interface.println(F(__TC_VERSION__));
+    interface.println(F("BOARD V2"));
 }
 
 void getPos(SCPI_C commands, SCPI_P parameters, Stream &interface)
 {
     if (parameters.Size() == 0 || String(parameters[0]).toInt() == 1)
         interface.printf("%.2f\n", xact);
-    //else if (String(parameters[0]).toInt() == 2)
-    //    interface.printf("%.2f\n", temp2);
 }
 
 void getTunings(SCPI_C commands, SCPI_P parameters, Stream &interface)
@@ -59,12 +58,9 @@ void setTunings(SCPI_C commands, SCPI_P parameters, Stream &interface)
     if (parameters.Size() == 0)
         return;
 
-    double newValue = String(parameters[0]).toFloat();
+    paramValueChanged = true;
 
-    /*if (parameters.Size() > 1 && String(parameters[1]) == "2")
-        pidselect = &pid2;
-    else
-        pidselect = &pid1;*/
+    double newValue = String(parameters[0]).toFloat();
 
     if (last_header == "XSET")
     {
@@ -100,6 +96,8 @@ void setLimits(SCPI_C commands, SCPI_P parameters, Stream &interface)
     if (parameters.Size() == 0)
         return;
 
+    paramValueChanged = true;
+
     double newValue = String(parameters[0]).toFloat();
 
     double max, min;
@@ -125,16 +123,17 @@ void setLimits(SCPI_C commands, SCPI_P parameters, Stream &interface)
     save_tuning(pid1); //, pid2);
 }
 
-void getLimits(SCPI_C commands, SCPI_P parameters, Stream &interface) {
+void getLimits(SCPI_C commands, SCPI_P parameters, Stream &interface)
+{
     String last_header = String(commands.Last());
     last_header.toUpperCase();
     PID *pidselect = &pid1;
 
-    //if (last_header == "MAX?")
-      interface.printf("%.5f\n", pidselect->GetOutMax());
-    
-    //Felse if (last_header == "MIN?")
-        interface.printf("%.5f\n", pidselect->GetOutMin());
+    // if (last_header == "MAX?")
+    interface.printf("%.5f\n", pidselect->GetOutMax());
+
+    // Felse if (last_header == "MIN?")
+    interface.printf("%.5f\n", pidselect->GetOutMin());
 }
 
 void initialize_SCPI()
@@ -157,9 +156,9 @@ void initialize_SCPI()
     my_instrument.RegisterCommand(F(":GD?"), &getTunings);
     my_instrument.RegisterCommand(F(":GI?"), &getTunings);
     my_instrument.RegisterCommand(F(":XSET?"), &getTunings);
-    
+
     my_instrument.RegisterCommand(F(":MINmax?"), &getLimits);
-    //my_instrument.RegisterCommand(F(":MAX?"), &getLimits);
+    // my_instrument.RegisterCommand(F(":MAX?"), &getLimits);
 
     /*my_instrument.RegisterCommand(F(":BRIGhtness?"), &GetBrightness);
     my_instrument.RegisterCommand(F(":BRIGhtness:INCrease"), &IncDecBrightness);
@@ -175,4 +174,3 @@ void loopComunication(void *param)
         delay(100);
     }
 }
-
