@@ -42,7 +42,7 @@ void load_tuning(PID *pid1); //, PID *pid2);
 void loopServo(void *param);
 // void loopSignal(void *param);
 
-double xact, xset = 20;
+double xact, xset;
 double output, outputGUI, res;
 PID pid1(&xact, &output, &xset, 0, 0, 0, DIRECT);
 

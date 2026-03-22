@@ -5,17 +5,19 @@
 extern float turn;
 extern float turn_frac, turnTotal, turn_frac0;
 extern float turnTotal_avg;
-extern const float epsilon;
+//extern const float epsilon;
+
 
 extern bool outputEnable;
 
-extern float I, Q;
+//extern float I, Q;
 extern double xact, xset;
 extern long t_loop_us;
 extern double output, outputGUI, res;
 extern PID pid1;
 
 void save_tuning(PID pid1);
+void save_value(const char *name, const char *key, double data);
 
 void drawCardran(int x, int y, int width, float value1, float value2, float value3 = 0)
 {
@@ -87,7 +89,7 @@ int selection = 1;
 int mainColor = color565(220, 100, 0);
 int colorText = WHITE;
 
-bool paramValueChanged = false;  // can be used outside GUI.cpp (in communication.cpp to update new param values) 
+bool paramValueChanged = false; // can be used outside GUI.cpp (in communication.cpp to update new param values)
 
 void draw_frame(String name, float value, int x, int y, bool selected, int precision = 1)
 {
@@ -262,31 +264,31 @@ void loopGUI(void *param)
             draw(0);
         }
 
-        if (button1.pressedFor(2000))
+        if (button1.pressedFor(1000))
         {
             pid1.SetTunings(0, pid1.GetKi(), pid1.GetKd());
             paramValueChanged = true;
             draw(0);
         }
-        if (button2.pressedFor(2000))
+        if (button2.pressedFor(1000))
         {
             pid1.SetTunings(pid1.GetKp(), 0, pid1.GetKd());
             paramValueChanged = true;
             draw(0);
         }
-        if (button3.pressedFor(2000))
+        if (button3.pressedFor(1000))
         {
             pid1.SetTunings(pid1.GetKp(), pid1.GetKi(), 0);
             paramValueChanged = true;
             draw(0);
         }
-        if (button4.pressedFor(2000))
+        if (button4.pressedFor(1000))
         {
             pid1.SetOutputLimits(-100, 100);
             paramValueChanged = true;
             draw(0);
         }
-        if (button5.pressedFor(2000))
+        if (button5.pressedFor(1000))
         {
             xset = 0;
             paramValueChanged = true;
@@ -336,6 +338,7 @@ void loopGUI(void *param)
         if (paramValueChanged && (millis() - lastChanged) > 2000UL) // 2 second latency to avoid repeated write to the EEPROM
         {
             save_tuning(pid1);
+            save_value("PID1", "XSET", xset);
             paramValueChanged = false;
             Serial.println("parameters saved!");
         }

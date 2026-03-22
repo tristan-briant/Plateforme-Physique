@@ -67,7 +67,7 @@ void setTunings(SCPI_C commands, SCPI_P parameters, Stream &interface)
         if (pidselect == &pid1)
         {
             xset = newValue;
-            save_value("PID1", "XSET", xact);
+            save_value("PID1", "XSET", xset);
         }
         /*else
         {
