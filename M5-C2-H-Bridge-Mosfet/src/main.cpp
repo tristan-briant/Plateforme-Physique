@@ -16,6 +16,9 @@ gpio_num_t PinAH = GPIO_NUM_13,
 #ifdef BOARD_V2
 gpio_num_t PinPWM = GPIO_NUM_19,
            PinDIR = GPIO_NUM_27;
+
+gpio_num_t PinISENS = GPIO_NUM_35;
+gpio_num_t PinInput = GPIO_NUM_36;
 #endif
 
 int freqPWM = 10000;
@@ -23,8 +26,12 @@ int freqPWM = 10000;
 bool outputEnable = false;
 
 float I, Q;
+float Isens;
+float VInput;
 
 const float LambdaOver2 = 340.0 / 40 * 0.5; // lambda over 2 in mm ( 0.5 * c / freq *1000)  with f= 40kHz
+
+bool Detecteur_AUX = false; // True if a auxiliary detector (ie ultrasonic) is plugged on port A
 
 long t_loop_us;
 
@@ -35,6 +42,8 @@ const float epsilon = 0.02;
 
 void loopGUI(void *param);
 void loopComunication(void *param);
+void loopISens(void *param);
+
 bool load_value(const char *name, const char *key, double *target);
 void save_value(const char *name, const char *key, double data);
 void save_tuning(PID pid1);  //, PID pid2);
@@ -45,6 +54,24 @@ void loopServo(void *param);
 double xact, xset;
 double output, outputGUI, res;
 PID pid1(&xact, &output, &xset, 0, 0, 0, DIRECT);
+
+float mediane(float a, float b, float c)
+{
+  float x;
+
+  if (a > b)
+  {
+    x = a;
+    a = b;
+    b = x;
+  }
+  if (c > b)
+    return b;
+  else if (c > a)
+    return c;
+  else
+    return a;
+}
 
 void setup()
 {
@@ -84,11 +111,21 @@ void setup()
   ledcSetup(0, freqPWM, 10);
   ledcAttachPin(PinPWM, 0);
   ledcWrite(0, 1023);
+
+  adcAttachPin(PinISENS);
+  adcAttachPin(PinInput);
+  analogReadResolution(12);
+  analogSetClockDiv(1);
+  analogSetAttenuation(ADC_11db);
+
+
+
 #endif
 
   xTaskCreatePinnedToCore(loopGUI, NULL, 10000, NULL, 0, NULL, 0);
   xTaskCreatePinnedToCore(loopServo, "", 10000, NULL, 0, NULL, 0);
   xTaskCreatePinnedToCore(loopComunication, "", 10000, NULL, 0, NULL, 0);
+  xTaskCreatePinnedToCore(loopISens, "", 4000, NULL, 1, NULL, 0);
 
   load_tuning(&pid1);
   load_value("PID1", "XSET", &xset);
@@ -127,6 +164,7 @@ void loop()
 
     if (Serial2.available())
     {
+      Detecteur_AUX = true;
       static long t_loop_old;
       t_loop_us = micros() - t_loop_old;
       t_loop_old = micros();
@@ -217,9 +255,73 @@ void loopServo(void *param)
       res = 0;
       ledcWrite(0, 1023);
     }
+
+    /*int voltage = analogReadMilliVolts(PinISENS);
+
+    float i = (voltage - 301) * 11.0; // 300mV offset is 3.3V * 10k/(10k+100K) and 1.1 factor is 100K/(10K+100K) * 1/0.1 Ohm
+    if (i < 0)
+      i = 0;
+    Isens = Isens * 0.5 + i * 0.5;*/
+
 #endif
 
     outputGUI = res;
     delay(20);
+  }
+}
+
+void loopISens(void *param)
+{
+  float V_offset = 300; //  300mV offset is 3.3V * 10k/(10k+100K)
+  float measure;
+
+  const uint32_t N_Sample = 50;     // Average over N_Sample samples for fast lock
+  const uint32_t N_Sample_HR = 500; // Average over N_Sample_HR samples for long term regulation
+  const float RSENS = 0.10;         // 100mOhm Rsens
+
+  while (true)
+  {
+    // Make 3 measurments and keep the median
+    float a = analogReadMilliVolts(PinISENS);
+    // delay(1);
+    float b = analogReadMilliVolts(PinISENS);
+    // delay(1);
+    float c = analogReadMilliVolts(PinISENS);
+    // delay(1);
+
+    measure = mediane(a, b, c);
+
+    if (!outputEnable)
+    { // refresh the offset
+      V_offset = 0.9 * V_offset + 0.1 * measure;
+    }
+
+    float Imeas = (measure - V_offset) * 11.0; // 300mV offset is 3.3V * 10k/(10k+100K) and 1.1 factor is 100K/(10K+100K) * 1/0.1 Ohm
+
+    if (Imeas < 0)
+      Imeas = 0;
+    Isens = ((N_Sample - 1) * Isens + Imeas) / N_Sample;
+    // isens = measure;
+    // isens_HR = ((N_Sample_HR - 1) * isens_HR + Imeas) / N_Sample_HR;
+
+    if (!Detecteur_AUX)
+    {
+
+      a = analogReadMilliVolts(PinInput);
+      // delay(1);
+      b = analogReadMilliVolts(PinInput);
+      // delay(1);
+      c = analogReadMilliVolts(PinInput);
+      // delay(1);
+
+      measure = mediane(a, b, c);
+
+      VInput = (measure/1000.0 - 1.443) * 7.060606060606061; // coeff calculer dans etage-entree.py
+
+      xact = VInput;
+      turn = VInput / 20;
+    }
+
+    delay(1);
   }
 }

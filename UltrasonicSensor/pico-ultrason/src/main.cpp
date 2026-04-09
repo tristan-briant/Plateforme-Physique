@@ -36,7 +36,7 @@ float distance;
 
 // Channel 0 is GPIO26
 #define CAPTURE_CHANNEL 0
-#define CAPTURE_DEPTH 100 // 50 , 5000Hz   100 4000Hz 200 2000Hz
+#define CAPTURE_DEPTH 100 // 50 for 5000Hz, 100 for 4000Hz, 200 for 2000Hz
 #define Freq 4000
 
 ///////////// Gain selection //////////////////////////
@@ -274,7 +274,8 @@ void loop() {}
 
 void loopTask(uint /*gpio*/, uint32_t /*event_mask*/)
 {
-  static int countDown = 10; // set the zero at start up
+  static int countDown = 2 * Freq;        // set the zero at start up, 0.5*(max+min) during 2 secondes
+  static float minTurn = 1, maxTurn = -1; // absurd init values to be changed in first loop
 
   float Ival = 0,
         Qval = 0;
@@ -324,7 +325,12 @@ void loopTask(uint /*gpio*/, uint32_t /*event_mask*/)
 
   if (countDown)
   {
-    turnTotal0 = turnTotal_avg;
+    if (turnTotal_avg > maxTurn)
+      maxTurn = turnTotal_avg;
+    if (turnTotal_avg < minTurn)
+      minTurn = turnTotal_avg;
+    turnTotal0 = 0.5 * (maxTurn + minTurn);
+
     countDown--;
   }
 

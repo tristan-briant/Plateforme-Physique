@@ -5,12 +5,12 @@
 extern float turn;
 extern float turn_frac, turnTotal, turn_frac0;
 extern float turnTotal_avg;
-//extern const float epsilon;
-
+extern float Isens;
+// extern const float epsilon;
 
 extern bool outputEnable;
 
-//extern float I, Q;
+// extern float I, Q;
 extern double xact, xset;
 extern long t_loop_us;
 extern double output, outputGUI, res;
@@ -61,7 +61,7 @@ void drawCardran(int x, int y, int width, float value1, float value2, float valu
     }
     canvasCadran.setTextDatum(TC_DATUM);
     canvasCadran.setFont(&FreeSans9pt7b);
-    canvasCadran.drawFloat(xact, 1, width / 2, width / 2 + 5);
+    canvasCadran.drawFloat(xact, 2, width / 2, width / 2 + 5);
 
     r1 = 0.1 * r, r2 = 0.8 * r;
     cosin = cos(angle2_old);
@@ -158,7 +158,7 @@ void draw(int part = -1)
             img.setTextDatum(CC_DATUM);
             img.setTextColor(WHITE);
             img.setFont(&FreeSansBold12pt7b);
-            img.drawString(outputEnable ? "OFF" : "ON", 50, 50);
+            img.drawString(outputEnable ? "ON" : "OFF", 50, 50);
         }
         img.pushSprite(220, 100);
     }
@@ -186,6 +186,27 @@ void draw(int part = -1)
     told = millis();
 
     return;
+}
+
+void draw_current(int x, int y)
+{
+    static bool first_time = true;
+    static M5Canvas img(&M5.Lcd);
+
+    if (first_time)
+    {
+        img.createSprite(100, 20);
+        first_time = false;
+    }
+
+    img.fillSprite(BLACK);
+    char str[20];
+    img.setTextDatum(CL_DATUM);
+    sprintf(str, "%4d mA", (int)Isens);
+    img.setTextColor(DARKGREY);
+    img.drawString(str, 5, 10, &FreeSans9pt7b);
+
+    img.pushSprite(x, y);
 }
 
 void loopGUI(void *param)
@@ -317,7 +338,7 @@ void loopGUI(void *param)
                 gd += inc * 0.1;
                 break;
             case 4:
-                max += inc;
+                max = constrain(max + inc, 0, 100);
                 break;
             case 5:
                 xset += inc * 0.1;
@@ -332,6 +353,7 @@ void loopGUI(void *param)
 
         drawCardran(120, 240 - 80, 80, xact, xset, outputGUI);
 
+        draw_current(10, 170);
         delay(20);
 
         static unsigned long lastChanged = 0;
