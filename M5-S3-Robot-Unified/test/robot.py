@@ -53,7 +53,7 @@ def sendstring(x):
     return True
         
 
-def query(x,timeout=1.0):
+def query(x,timeout=0.05):
     
     import serial
     #import serial
@@ -64,20 +64,19 @@ def query(x,timeout=1.0):
     address=''
 
     for port, desc, hwid in ports:
-            if('1A86:55D4' in hwid or '303A:1001' in hwid):    # hwid of the M5CORE2
+            if('1A86:55D4' in hwid or '303A:1001' in hwid):    # hwid of the M5CORE2 and M5CoreS3
                 address = port
                 break
     
     if(address != ''):
         with serial.Serial(address, 115200,timeout=timeout,rtscts=True) as ser:
-           # ser.setDTR(0)
-           # ser.setRTS(0)
+           ser.flush()
+           
            b = bytes(x, 'utf-8')
            ser.write(b)
            ser.write(b'\n')
-           ser.flush()
-           time.sleep(0.01)    # needed on slow computers ?
-           
+          
+           # time.sleep(0.001)    # needed on slow computers ?
            answer = ser.readline()
            # print(answer)
            
@@ -89,7 +88,7 @@ def query(x,timeout=1.0):
         return None
     
 
-def sensor(side='both'):
+def sensor(side='BOTH'):
     '''
     Return the state of the sensor
 
@@ -104,8 +103,10 @@ def sensor(side='both'):
         True if level high
 
     '''
+    answer = ''
     
-    answer=query('SENSOR?',0.5)
+    while (len(answer)<3):
+        answer=query('SE?',0.01)
 
     if side.upper()=='BOTH':
         return answer[0]=='1' , answer[2]=='1' 

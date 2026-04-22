@@ -34,7 +34,7 @@ bool motorRightOn;
 bool send_message_flag = false;
 
 bool LeftInput, RightInput;
-bool falte;
+bool falt;
 
 int xleft_target, xleft;
 int xright_target, xright;
@@ -204,12 +204,12 @@ void loopGUI(void *param)
     }
 
     // float vbus = M5.Power.getVBUSVoltage();
-    // if (vbus < 1.0)
+    // if (vbus < 1000.0)
     if (gpio_get_level(PinShortTest) == 0)
     {
-      if (!falte)
+      if (!falt)
       {
-        falte = true;
+        falt = true;
         // redraw = false;
         M5.Lcd.fillRect(10, 50, 310, 140, RED);
         // M5.Lcd.textbgcolor = RED;
@@ -223,9 +223,9 @@ void loopGUI(void *param)
     }
     else
     {
-      if (falte)
+      if (falt)
       {
-        falte = false;
+        falt = false;
         M5.Lcd.fillRect(10, 30, 310, 210, BLACK);
         redraw = true;
       }
@@ -238,7 +238,7 @@ void loopGUI(void *param)
       redraw = true;
     }
 
-    if (redraw && !falte)
+    if (redraw && !falt)
       switch (mode)
       {
       case RunMode::Idle:
@@ -260,11 +260,11 @@ void loopGUI(void *param)
     if (t1 - t0 > 200UL)
     {
       float vb = M5.Power.getBatteryVoltage();
-      // float vbus = M5.Power.getExtOutput();  // getVBUSVoltage();
+      // float vbus = M5.Power.getVBUSVoltage(); // getExtOutput();  // getVBUSVoltage();
 
-      // float ib = M5.Power.getBatteryCurrent();
+      float ib = M5.Power.getBatteryCurrent();
 
-      sprintf(str, "Batt: %3d%%    %4.2fV ", (int)((vb - 3200) * 0.1), vb / 1000);
+      sprintf(str, "Batt: %3d%%  %4.2fV ", (int)((vb - 3200) * 0.1), vb / 1000);
 
       banner.setFont(&FreeSans12pt7b);
       banner.fillSprite(BLACK);
@@ -309,7 +309,7 @@ void setup()
   auto cfg = M5.config();
   cfg.output_power = true;
   M5.begin(cfg);
-  Serial.begin(115200);
+  // Serial.begin(115200);  // must be set in the core where serial.read / write will be executed
 
   for (int i = 0; i < 4; i++)
   {
@@ -321,14 +321,13 @@ void setup()
   pinMode(PinLeftEye, INPUT);
   pinMode(PinShortTest, INPUT);
 
-  xTaskCreatePinnedToCore(loopGUI, "Task GUI", 4000, NULL, 0, NULL, 0);
-  xTaskCreatePinnedToCore(loopEye, "Task Eye", 4000, NULL, 0, NULL, 0);
-  xTaskCreatePinnedToCore(loopComunication, "Task Com", 4000, NULL, 1, NULL, 0);
+  xTaskCreatePinnedToCore(loopGUI, "Task GUI", 20000, NULL, 0, NULL, 0);
+  // xTaskCreatePinnedToCore(loopEye, "Task Eye", 20000, NULL, 0, NULL, 0);  put in main loop
+  xTaskCreatePinnedToCore(loopComunication, "Task Com", 20000, NULL, 0, NULL, 0);
 }
 
 void loop()
 {
-
   unsigned int c1, c2 = 0;
   gpio_num_t *p1 = PinMotor1;
   gpio_num_t *p2 = PinMotor2;
@@ -340,10 +339,22 @@ void loop()
 
   while (true)
   { // never return
+
     int cc1, cc2;
     unsigned int c;
     static long t_old_r = 0, t_old_l = 0;
     long t = micros();
+
+    LeftInput = gpio_get_level(PinLeftEye);   // analogRead(PinLeftEye) > Threshold;
+    RightInput = gpio_get_level(PinRightEye); // analogRead(PinRightEye) > Threshold;
+
+    /******************* MODE RUN   **************************/
+    if (mode == RunMode::Run)
+    {
+      Mmode = MoteurMode::Speed;
+      v_right = RightInput ? 1 : 0;
+      v_left = LeftInput ? 1 : 0;
+    }
 
     /******************* MODE POSITION   **************************/
     if (Mmode == MoteurMode::Position)

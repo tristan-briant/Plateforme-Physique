@@ -1,5 +1,8 @@
 import robot
 import time
+import keyboard
+
+print('press esc to quit')
 
 while True:
     oeil_G , oeil_D = robot.sensor()  # Que voient les yeux ? blanc -> True, noir -> False
@@ -15,5 +18,10 @@ while True:
     
     if oeil_G == False and oeil_D == False :
         robot.speed(0,0)             # le robot s'arrête
+        
     
-    time.sleep(0.1)     # attend 0.1 secondes
+    if keyboard.is_pressed('esc'):  # presser la touche 'echap' pour quitter le programme
+        break
+    
+    time.sleep(0.01)     # attend 0.1 secondes
+    

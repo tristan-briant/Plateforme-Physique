@@ -53,11 +53,11 @@ void draw(int part = -1)
 
         img.setTextColor(colorText);
         img.setTextDatum(BL_DATUM);
-        img.setFont(&FreeSans18pt7b);
+        img.setFont(&fonts::FreeSans18pt7b);
         img.drawString("Freq ", 10, 50);
         img.drawString("Hz", 250, 50);
         img.setTextDatum(BR_DATUM);
-        img.setFont(&FreeSansBold24pt7b);
+        img.setFont(&fonts::FreeSansBold24pt7b);
         img.drawFloat(freq, 2, 240, 50 + 2);
 
         img.pushSprite(0, 0);
@@ -69,11 +69,11 @@ void draw(int part = -1)
 
         img.setTextColor(colorText);
         img.setTextDatum(BL_DATUM);
-        img.setFont(&FreeSans18pt7b);
+        img.setFont(&fonts::FreeSans18pt7b);
         img.drawString("Ampl ", 10, 50);
         img.drawString("mm", 250, 50);
         img.setTextDatum(BR_DATUM);
-        img.setFont(&FreeSansBold24pt7b);
+        img.setFont(&fonts::FreeSansBold24pt7b);
         img.drawFloat(amp, 1, 240, 50 + 2);
 
         img.pushSprite(0, 50);
@@ -85,11 +85,11 @@ void draw(int part = -1)
 
         img.setTextColor(colorText);
         img.setTextDatum(BL_DATUM);
-        img.setFont(&FreeSans18pt7b);
+        img.setFont(&fonts::FreeSans18pt7b);
         img.drawString("Offset ", 10, 50);
         img.drawString("mm", 250, 50);
         img.setTextDatum(BR_DATUM);
-        img.setFont(&FreeSansBold24pt7b);
+        img.setFont(&fonts::FreeSansBold24pt7b);
         img.drawFloat(offsetTarget - offsetCal, 1, 240, 50 + 2);
 
         img.pushSprite(0, 100);
@@ -100,7 +100,7 @@ void draw(int part = -1)
         // img.drawRect(5, 0, 320 - 10, 50, colorSelection);
         img.fillSprite(BLACK);
         img.setTextColor(colorText);
-        img.setFont(&FreeSansBold12pt7b);
+        img.setFont(&fonts::FreeSansBold12pt7b);
         img.setTextDatum(CC_DATUM);
         // img.setTextColor(mode_run == SINUS ? colorText : DARKGREY);
         // img.setFont(mode_run == SINUS ? &FreeSansBold12pt7b : &FreeSans12pt7b);
@@ -131,7 +131,7 @@ void draw(int part = -1)
         img.setTextColor(colorText);
         // img.setFont(&FreeSans12pt7b);
         img.setTextDatum(BC_DATUM);
-        img.setFont(&FreeSansBold18pt7b);
+        img.setFont(&fonts::FreeSansBold18pt7b);
         img.fillRoundRect(320 / 6 - 50, 2, 100, 100, 15, color565(30));
         img.drawRoundRect(320 / 6 - 50, 2, 100, 100, 15, color565(100, 0, 0));
         img.drawString("-", 320 / 6, 38);

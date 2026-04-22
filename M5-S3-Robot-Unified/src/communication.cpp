@@ -12,6 +12,14 @@ bool getLeftSensor();
 
 SCPI_Parser my_instrument;
 
+void test_com(SCPI_C commands, SCPI_P parameters, Stream &interface)
+{
+    static int count = 0;
+
+    count++;
+    interface.println(count);
+}
+
 void Identify(SCPI_C commands, SCPI_P parameters, Stream &interface)
 {
     interface.print(F("Robot, "));
@@ -79,41 +87,29 @@ void sensor(SCPI_C commands, SCPI_P parameters, Stream &interface)
     else
         str[2] = '0';
 
-    /*interface.print(",");
-    if (getRightSensor())
-        interface.print("1");
-    else
-        interface.print("0");
-
-    if (getLeftSensor())
-        interface.print("1");
-    else
-        interface.print("0");
-    interface.print(",");
-    if (getRightSensor())
-        interface.print("1");
-    else
-        interface.print("0");*/
     interface.println(str);
 }
 
 void initialize_SCPI()
 {
-    int param = 1;
+    // int param = 1;
+    my_instrument.RegisterCommand(F("SEnsor?"), &sensor);
     my_instrument.RegisterCommand(F("*IDN?"), &Identify);
     my_instrument.RegisterCommand(F("MOVE"), &move);
     my_instrument.RegisterCommand(F("SPEED"), &speed);
     my_instrument.RegisterCommand(F("MOVING?"), &MovingStatut);
-    my_instrument.RegisterCommand(F("SEnsor?"), &sensor);
+    my_instrument.RegisterCommand(F("TEST?"), &test_com);
 }
 
 void loopComunication(void *param)
 {
+    Serial.begin(115200);
+
     initialize_SCPI();
     while (true)
     {
         my_instrument.ProcessInput(Serial, "\n");
-        //Serial.flush();
+
         delay(1);
     }
 }
