@@ -3,21 +3,21 @@
 
 int SlowSerial::write(char b)
 {
-    static long nextT = 0;
+    static unsigned long nextT = 0;
     static int k = -1; // numéro du bit
-    static long Periode = 1e6 / comSpeed;
+    static unsigned long Periode = 1e6 / comSpeed;
 
-    static long t_old = 0;
+    static unsigned long t_old = 0;
 
-    long t = micros();
+    unsigned long t = micros();
 
     if (comSpeed >= 300) // Si la vitesse est grande on utilise le software serial
     {
-        if (t > t_old + 100000)
+        if (t > t_old + 100000UL)
         {
             Serial2.write(b);
             t_old = t;
-            //delay(50);
+            // delay(50);
             return 1;
         }
 
@@ -66,9 +66,9 @@ int SlowSerial::write(char b)
 
 char SlowSerial::read()
 {
-    static long nextT = 0;
+    static unsigned long nextT = 0;
     static int k = -1; // numéro du bit
-    static long Periode = 1e6 / comSpeed;
+    static unsigned long Periode = 1e6 / comSpeed;
     static char c;
 
     if (comSpeed >= 300)
@@ -79,9 +79,9 @@ char SlowSerial::read()
             return 0;
     }
 
-    long t = micros();
+    unsigned long t = micros();
 
-    if (t > nextT + 2 * Periode) // il y a eu un bug on reset
+    if (t > nextT + 2UL * Periode) // il y a eu un bug on reset
         k = -1;
 
     if (k < 0)
@@ -147,7 +147,7 @@ void SlowSerial::begin(long baud, int RXpin, int TXpin, bool inv)
         // pinMode(txpin, OUTPUT);
         // delay(100);
         Serial2.end();
-        Serial2.begin(baud, SERIAL_8N1, 19, txpin, inv);
+        Serial2.begin(baud, SERIAL_8N1, rxpin, txpin, inv);
         // Serial2.begin(baud, SERIAL_8N1, 19, 27, true);
         // delay(100);
     }

@@ -14,9 +14,11 @@ const int YPosModeLine = 0;         // position de la ligne Mode
 const int ButtonSize = 50; // Taille affichée des boutons
 
 SlowSerial SerialS;
-char StringRX[16]; // chaine de caractère lu sur le port série
-char StringTX[16]; // chaine de caractère lu sur le port série pout transmission
-int indexRXTX;
+char StringRX[18]; // chaine de caractère lu sur le port série
+char StringTX[18]; // chaine de caractère lu sur le port série pout transmission
+int indexRX;
+int indexTX;
+int indexToSend;
 bool newCharAvailable = false;
 
 void change_parameter();
@@ -45,8 +47,8 @@ const char *ModeDescription[] = {
     "WIFI"};
 
 const char *message[] = {
-    "SORBONNE UNIV.",
-    "-- BONJOUR -- "};
+    " SORBONNE UNIV. ",
+    "-*- BONJOUR -*- "};
 // char message2[] = "-- BONJOUR -- ";
 
 const int modeMAX = sizeof ModeDescription / sizeof(char *);
@@ -224,9 +226,14 @@ void change_parameter()
 
   if (ModeSelect == RECEIVER || ModeSelect == REPEATER)
   {
-    for (int i = 0; i < 14; i++)
+    for (int i = 0; i < 18; i++)
+    {
       StringRX[i] = 0;
-    indexRXTX = 0;
+      StringTX[i] = 0;
+    }
+    indexRX = 0;
+    indexTX = 0;
+    indexToSend = 0;
 
     SerialS.begin(ComSpeed[SpeedSelect]);
   }
@@ -257,7 +264,7 @@ void loop()
   static unsigned long tOld_us; // Utilisé pour le clignotement
   static bool state = false;
   unsigned long t_us = micros();
-  static int indexToSend;
+
   static long told;
 
   deltat = t_us - told;
@@ -286,8 +293,8 @@ void loop()
   {
     const char *msg = message[messageSelect];
 
-    if (SerialS.write(msg[indexRXTX]))
-      indexRXTX = (indexRXTX + 1) % 14;
+    if (SerialS.write(msg[indexTX]))
+      indexTX = (indexTX + 1) % 16;
   }
     delay(2);
     break;
@@ -299,9 +306,9 @@ void loop()
     {
       if (c == 9) // tab
         c = 32;
-      else if (c == 10 || c == 13)  // \n or \r
+      else if (c == 10 || c == 13) // \n or \r
         c = 10;
-      else if (c < 32 || c >= 127)  // non printable char
+      else if (c < 32 || c >= 127) // non printable char
         c = '?';
 
       // Serial.print(c);
@@ -310,16 +317,16 @@ void loop()
       if (c == 10)
         c = 32;
 
-      if (indexRXTX < 14)
+      if (indexRX < 16)
       {
-        StringRX[indexRXTX] = c;
-        indexRXTX++;
+        StringRX[indexRX] = c;
+        indexRX++;
       }
       else
       {
-        for (int i; i < 13; i++)
+        for (int i; i < 15; i++)
           StringRX[i] = StringRX[i + 1];
-        StringRX[13] = c;
+        StringRX[15] = c;
       }
     }
     delay(2);
@@ -327,7 +334,7 @@ void loop()
   break;
   case REPEATER:
     delay(2);
-    if (indexToSend < indexRXTX)
+    if (indexToSend < indexTX)
     { // Character to send
       if (SerialS.write(StringTX[indexToSend]))
         indexToSend++;
@@ -352,40 +359,37 @@ void loop()
         if (c == 10)
           c = 32;
 
-        if (indexRXTX < 14)
+        if (indexRX < 16)
         {
-          StringRX[indexRXTX] = c;
-          indexRXTX++;
+          StringRX[indexRX] = c;
+          indexRX++;
         }
         else
         {
-          for (int i; i < 13; i++)
+          for (int i; i < 15; i++)
             StringRX[i] = StringRX[i + 1];
-          StringRX[13] = c;
+          StringRX[15] = c;
         }
       }
     }
 
-    // if (Serial.available())
-
-    //{
     char c = wifiAvailable(); // Serial.read();
+
     if (c < ' ' && c != '\n') // Si le caractère n'est imprimable on ne l'imprime pas (sauf \n)
       break;
 
-    if (indexRXTX < 14)
+    if (indexTX < 16)
     {
-      StringTX[indexRXTX] = c;
-      indexRXTX++;
+      StringTX[indexTX] = c;
+      indexTX++;
     }
     else if (indexToSend > 0)
     {
-      for (int i = 0; i < 13; i++)
+      for (int i = 0; i < 15; i++)
         StringTX[i] = StringTX[i + 1];
-      StringTX[13] = c;
+      StringTX[15] = c;
       indexToSend--;
     }
-    //}
 
     break;
   }
@@ -570,14 +574,17 @@ void loopGUI(void *param)
         imgScreen.setTextDatum(CL_DATUM);
         imgScreen.setTextColor(WHITE, BLACK);
         imgScreen.setFont(&fonts::FreeSans9pt7b);
-        imgScreen.drawString("Se connecter sur", 10, 90);
+        imgScreen.drawString("Se connecter sur :", 10, 90);
         imgScreen.setFont(&fonts::FreeSans12pt7b);
-        imgScreen.drawString(str, 10, 130);
+        imgScreen.drawString(str, 30, 120);
 
-        imgScreen.drawString("192.168.4.1", 10, 160);
+        imgScreen.drawString("192.168.4.1", 30, 148);
         imgScreen.setFont(&fonts::FreeSans9pt7b);
 
-        imgScreen.drawString("Desactiver donnees mobiles", 10, 200);
+        imgScreen.drawString("Desactiver donnees mobiles", 10, 170);
+
+        imgScreen.drawRoundRect(2, 210 - 30, 116, 60, 10, DARKGREEN);
+        imgScreen.drawRoundRect(122, 210 - 30, 116, 60, 10, DARKGREEN);
 
         imgScreen.pushSprite(0, 0);
         redraw = false;
@@ -606,15 +613,44 @@ void loopGUI(void *param)
     {
       if (ModeSelect == RECEIVER)
       {
-        // imgScreen.setTextDatum(CL_DATUM);
         imgBannerRX.fillSprite(BLACK);
         imgBannerRX.drawRoundRect(0, 0, 240, 70, 10, DARKGREEN);
 
         imgBannerRX.setFont(&fonts::FreeMono12pt7b);
         imgBannerRX.setTextColor(WHITE, BLACK);
         imgBannerRX.setTextDatum(CL_DATUM);
-        imgBannerRX.drawString(StringRX, 22, 35);
+        imgBannerRX.drawString(StringRX, 5, 35);
         imgBannerRX.pushSprite(0, 160 - 35);
+      }
+      if (ModeSelect == REPEATER)
+      {
+        imgBannerRX.fillSprite(BLACK);
+        int bgcolor = color565(0, 32, 0);
+        imgBannerRX.fillRoundRect(2, 5, 116, 60, 10, bgcolor);
+        imgBannerRX.drawRoundRect(2, 5, 116, 60, 10, DARKGREEN);
+        imgBannerRX.fillRoundRect(122, 5, 116, 60, 10, bgcolor);
+        imgBannerRX.drawRoundRect(122, 5, 116, 60, 10, DARKGREEN);
+
+        imgBannerRX.setFont(&fonts::FreeMono9pt7b);
+        imgBannerRX.setTextColor(WHITE, BLACK);
+        imgBannerRX.setTextDatum(CL_DATUM);
+
+        String s;
+
+        imgBannerRX.setTextColor(WHITE, bgcolor);
+
+        s = String(StringRX, 16);
+        imgBannerRX.drawString(s.substring(0, min(8, (int)s.length())), 15, 25);
+        if (s.length() > 8)
+          imgBannerRX.drawString(s.substring(8, min(16, (int)s.length())), 15, 45);
+
+        s = String(StringTX, 16);
+        s.replace('\n', ' ');
+        imgBannerRX.drawString(s.substring(0, min(8, (int)s.length())), 135, 25);
+        if (s.length() > 8)
+          imgBannerRX.drawString(s.substring(8, min(16, (int)s.length())), 135, 45);
+
+        imgBannerRX.pushSprite(0, 210 - 35);
       }
     }
 
