@@ -297,12 +297,18 @@ void loop()
 
     if (c != 0)
     {
-      if (c == 9 || c == 10 || c == 13)
+      if (c == 9) // tab
         c = 32;
-      else if (c < 20 || c >= 127)
+      else if (c == 10 || c == 13)  // \n or \r
+        c = 10;
+      else if (c < 32 || c >= 127)  // non printable char
         c = '?';
+
       // Serial.print(c);
-      wifiWrite(c);
+      // wifiWrite(c);
+
+      if (c == 10)
+        c = 32;
 
       if (indexRXTX < 14)
       {
@@ -332,13 +338,19 @@ void loop()
 
       if (c != 0)
       {
-        if (c == 9 || c == 10 || c == 13)
+
+        if (c == 9)
           c = 32;
-        else if (c < 20 || c >= 127)
+        else if (c == 10 || c == 13)
+          c = 10;
+        else if (c < 32 || c >= 127)
           c = '?';
 
         wifiWrite(c);
         // Serial.print(c);
+
+        if (c == 10)
+          c = 32;
 
         if (indexRXTX < 14)
         {
@@ -358,7 +370,7 @@ void loop()
 
     //{
     char c = wifiAvailable(); // Serial.read();
-    if (c < ' ')              // Si le caractère n'est imprimable on ne l'imprime pas
+    if (c < ' ' && c != '\n') // Si le caractère n'est imprimable on ne l'imprime pas (sauf \n)
       break;
 
     if (indexRXTX < 14)

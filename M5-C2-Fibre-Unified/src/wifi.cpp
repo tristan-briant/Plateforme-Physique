@@ -22,18 +22,20 @@ const char index_html[] =
     R"rawliteral(<!DOCTYPE HTML>
 
 <html>
+
 <head>
-    <title>Interface fibre optique </title>
-    <meta name="viewport" content="width=device-width, initial-scale=1">  
-  </head> 
-  <body>
-    <div class="main">
-      <p>
-        <input type="text" id="inputText" value="coucou" size="15"/>
-        <input type="button" id="port" value="Envoyer" onclick="sendData()" />
-      </p>
-	  <p>
-	  <!-- Vitesse de com.
+  <title>Interface fibre optique </title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+</head>
+
+<body>
+  <div class="main">
+    <p>
+      <input type="text" id="inputText" value="coucou" size="15" />
+      <input type="button" id="port" value="Envoyer" onclick="sendData()" />
+    </p>
+    <p>
+      <!-- Vitesse de com.
 	  <select name="speed" id="speed-select" onchange="changeSpeed()" >
 			<option value="1">10</option>
 			<option value="2">30</option>
@@ -45,80 +47,88 @@ const char index_html[] =
 		</select>
 		bit/s
     -->
-		</p>
-      <hr />
-       <textarea id="outputText" name="w3review" rows="8" cols="30" disabled="true"></textarea>
-      <p>
-	  <input type="button" id="btclr" value="Clear" onclick="clearOutput()" />
-	  <!-- <input type="button" id="port" value="getData" onclick="poolData()" /> -->
-      </p>
-    </div>
-  </body>
+    </p>
+    <hr />
+    <textarea id="outputText" name="w3review" rows="8" cols="30" disabled="true"></textarea>
+    <p>
+      <input type="button" id="btclr" value="Clear" onclick="clearOutput()" />
+      <!-- <input type="button" id="port" value="getData" onclick="poolData()" /> -->
+    </p>
+  </div>
+</body>
 <script>
 
-document.addEventListener('DOMContentLoaded', setup, false);
+  document.addEventListener('DOMContentLoaded', setup, false);
 
-function setup() {
-    setInterval(poolData, 200);
-}
+  function setup() {
+    setInterval(poolData, 500);
+  }
 
-function clearOutput(){
-	const out=document.getElementById("outputText");
-	out.value ="";
-	console.log('output clear!');
-}
+  function clearOutput() {
+    const out = document.getElementById("outputText");
+    out.value = "";
+    console.log('output clear!');
+  }
 
-function changeSpeed(){
-	var requete = new XMLHttpRequest(); 
+  function changeSpeed() {
+    var requete = new XMLHttpRequest();
     var url = location + '?speed=';
-	url+=document.getElementById("speed-select").value;
-	requete.open("GET", url,true);
-	requete.send("toto");
-	console.log('speed changed! '+ url );
-}
+    url += document.getElementById("speed-select").value;
+    requete.open("GET", url, true);
+    requete.send("toto");
+    console.log('speed changed! ' + url);
+  }
 
-function sendData(){
-	var requete = new XMLHttpRequest(); 
+  function sendData() {
+    var requete = new XMLHttpRequest();
     var url = location + '?data=';
-	url+=document.getElementById("inputText").value;
-	requete.open("GET", url,true);
-	requete.send(null);
-	
-	console.log('sent!');
-}
+    newtext = document.getElementById("inputText").value;
+    url += newtext + "\n";
+    requete.open("GET", url, true);
+    requete.send(null);
+    document.getElementById("inputText").value = "";
+    out = document.getElementById("outputText");
+    if(out.value.length != 0 && out.value[out.value.length-1]!='\n')
+      out.value += "\n";
+    out.value += "--> " + newtext + "\n";
+    out.scrollTop = out.scrollHeight;
 
-function poolData() {
-    var requete = new XMLHttpRequest(); 
+    console.log('sent!');
+  }
+
+  function poolData() {
+    var requete = new XMLHttpRequest();
     var url = location + "?pooldata";
-    
+
     console.log(url) // Pour debugguer l'url formée    
     requete.open("GET", url, true); // On construit la requête
     requete.send(null); // On envoie !
-    requete.onreadystatechange = function() { // on attend le retour
-        if (requete.readyState == 4) { // Revenu !
-            if (requete.status == 200) {// Retour s'est bien passé !
-            	console.log(requete.responseText);
-                donnees = JSON.parse(requete.responseText);
-                console.log(donnees);
-                const out=document.getElementById("outputText");
-                newData = donnees["data"];
-                if(out.value.length  + newData.length > 30*8)
-                  out.value="";
-	            out.value+=donnees["data"];
-            }
+    requete.onreadystatechange = function () { // on attend le retour
+      if (requete.readyState == 4) { // Revenu !
+        if (requete.status == 200) {// Retour s'est bien passé !
+          console.log(requete.responseText);
+          donnees = JSON.parse(requete.responseText);
+          console.log(donnees);
+          out = document.getElementById("outputText");
+          newData = donnees["data"];
+          out.scrollTop = out.scrollHeight;
+          out.value += donnees["data"];
         }
+      }
     };
-	
-	console.log('pool!');
-}
+
+    console.log('pool!');
+  }
 
 
 </script>
+
 </html>
 )rawliteral";
 
 void send_page(WiFiClient client)
 {
+  client.println("HTTP/1.1 200 OK");
   client.print(index_html);
 }
 
@@ -185,7 +195,7 @@ void listenWIFI()
             {
               String str = currentLine.substring(11, -1);
               int i = str.indexOf(" ");
-              String str0 = str.substring(0, i);
+              String str0 = str.substring(0, i) + '\n';
               str0.replace("%20", " ");
               if (buffer.length() + str0.length() < BUFFER_LENGTH)
                 buffer += str0;
