@@ -38,6 +38,20 @@ enum mode
   REPEATER
 };
 
+void strcopy(const char *srt1, char *str2, int length, int start_index = 0) /*
+  Copy str1 in str2 from start_index to start_index + length
+  replace '\n' with space to print nicely
+  */
+{
+  for (int i = 0; i < length; i++)
+  {
+    str2[i] = srt1[i + start_index];
+    if (str2[i] == '\n')
+      str2[i] = ' ';
+  }
+  str2[length] = 0;
+}
+
 const char *ModeDescription[] = {
     "OFF",
     "Laser",
@@ -635,20 +649,19 @@ void loopGUI(void *param)
         imgBannerRX.setTextColor(WHITE, BLACK);
         imgBannerRX.setTextDatum(CL_DATUM);
 
-        String s;
-
         imgBannerRX.setTextColor(WHITE, bgcolor);
 
-        s = String(StringRX, 16);
-        imgBannerRX.drawString(s.substring(0, min(8, (int)s.length())), 15, 25);
-        if (s.length() > 8)
-          imgBannerRX.drawString(s.substring(8, min(16, (int)s.length())), 15, 45);
+        char buf[9];
 
-        s = String(StringTX, 16);
-        s.replace('\n', ' ');
-        imgBannerRX.drawString(s.substring(0, min(8, (int)s.length())), 135, 25);
-        if (s.length() > 8)
-          imgBannerRX.drawString(s.substring(8, min(16, (int)s.length())), 135, 45);
+        strcopy(StringRX, buf, 8, 0);
+        imgBannerRX.drawString(buf, 15, 25);
+        strcopy(StringRX, buf, 8, 8);
+        imgBannerRX.drawString(buf, 15, 45);
+
+        strcopy(StringTX, buf, 8, 0);
+        imgBannerRX.drawString(buf, 135, 25);
+        strcopy(StringTX, buf, 8, 8);
+        imgBannerRX.drawString(buf, 135, 45);
 
         imgBannerRX.pushSprite(0, 210 - 35);
       }
